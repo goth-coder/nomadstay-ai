@@ -1,0 +1,22 @@
+# Secrets
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Generated artifacts (come from S3 or from the ingestion pipeline)
+data/
+*.index
+
+# Editor / OS
+.vscode/
+Thumbs.db
+
+# Claude Code config and study notes (local only)
+.claude/
+/*.md
+!README.md
