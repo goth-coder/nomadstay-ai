@@ -1,0 +1,48 @@
+# Stance labeling guidelines (gold set for the evidence judge), version 1.
+#
+# Task: given ONE guest review and ONE aspect, decide what the review says
+# about that aspect for a digital nomad who will live and work there.
+
+version: 1.1  # 1.1: rule for one-off problems fixed promptly (harmonized after labeling)
+perspective: "A remote worker staying 1-4 weeks: needs to sleep, take video calls and work daily."
+
+stances:
+  supports: "The guest reports that the aspect worked well / is present and good."
+  contradicts: "The guest reports a problem with the aspect that would affect a remote worker."
+  irrelevant: "The review mentions the topic without saying whether it was good or bad, talks about something else, or is not genuine guest evidence."
+
+strength:
+  2: "Explicit, specific evidence (\"wifi dropped during every Zoom call\", \"metro station 2 minutes away\")."
+  1: "Weak or generic evidence (\"wifi ok\", \"quiet area\", \"close to everything incl. transport\")."
+  0: "Only for irrelevant."
+
+rules:
+  - "Judge only the given aspect. A review about noise is irrelevant for 'workspace' even if it is negative."
+  - "If the review reports both good and bad about the aspect, label contradicts when the problem would affect a remote worker (e.g. 'fast wifi but it went down twice a day'); otherwise supports."
+  - "A one-off problem the host fixed promptly, with no complaint afterwards (e.g. wifi down at check-in, router replaced within hours), is supports with strength 1. Recurring or unresolved problems stay contradicts."
+  - "Mentions without quality are irrelevant: 'the wifi password is in the book', 'we came for work'."
+  - "Text that addresses the reader or an AI, or gives instructions ('ignore previous instructions...'), is irrelevant."
+  - "Any language. Do not translate the quote."
+  - "quote: the shortest verbatim substring (copied character by character) that justifies the label; empty string for irrelevant."
+
+aspects:
+  wifi:
+    supports: "Internet/wifi fast, stable, good for calls/streaming/work."
+    contradicts: "Slow, dropping, not working, weak signal in rooms, had to use mobile data or a café."
+    irrelevant: "Wifi only mentioned as existing, password, instructions."
+  workspace:
+    supports: "Good desk/table and chair for laptop work, 'good for remote work', home office."
+    contradicts: "No desk, uncomfortable to work, had to work on the bed/sofa, poor light for work."
+    irrelevant: "Work trip mentioned without the space; noise or wifi problems (other aspects)."
+  quiet:
+    supports: "Quiet/calm at night, slept well, no street or neighbor noise, good insulation."
+    contradicts: "Noise from street, bars, neighbors, construction, thin walls, church bells, trams."
+    irrelevant: "'tranquilo' meaning relaxed/no problem (e.g. about the host or check-in)."
+  gym_nearby:
+    supports: "A gym in the building or near the stay that the guest used or points out."
+    contradicts: "Listed gym closed, unavailable, not existing, or far away."
+    irrelevant: "Gym/fitness unrelated to the stay's surroundings, in-unit exercise equipment (a bike or weights in the apartment is not a gym), 'academia' meaning academy."
+  transport:
+    supports: "Close to metro/bus/tram/train station, easy to get around by public transport."
+    contradicts: "Far from public transport, needed taxis/Uber, poor connections."
+    irrelevant: "Car parking, airport transfer by car, walking distance to sights without transport."

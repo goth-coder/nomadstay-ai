@@ -1,0 +1,173 @@
+# End-to-end scenarios for the NomadStay recommender (T5/T8).
+#
+# intent: what the intent extraction should produce (checked field by field).
+#   city: normalized city key or null; max_price in EUR or null;
+#   must_have: aspects filtered on listing claims (hard filter, in code);
+#   preferences: aspects ranked by evidence (soft).
+# expect:
+#   results               ranked listings, no hard-constraint violations
+#   no_results            nothing fits: say so and which constraint to relax
+#   unsupported_city      city outside the dataset: say so, recommend nothing
+#   unsupported_currency  budget not in EUR: say prices are EUR, do not convert
+# must_not: things the answer must never claim (checked by the grounding judge).
+
+snapshot: "2026-09-19"
+city_in_dataset: porto
+
+scenarios:
+  - id: wifi_gym_100
+    request: "Find me a place in Porto under €100/night, with reliable Wi-Fi and a gym."
+    intent: {city: porto, max_price: 100, must_have: [], preferences: [wifi, gym_nearby]}
+    expect: results
+    must_not: [live availability, current price, wifi speed not listed by the host]
+
+  - id: calls_quiet_90
+    request: "I have video calls all day. I need a quiet place in Porto under 90 euros."
+    intent: {city: porto, max_price: 90, must_have: [], preferences: [wifi, quiet]}
+    expect: results
+    must_not: [wifi speed not listed by the host]
+
+  - id: desk_must_80
+    request: "I need a proper desk to work. Porto, max €80 a night."
+    intent: {city: porto, max_price: 80, must_have: [workspace], preferences: [workspace]}
+    expect: results
+    must_not: [a listing without a workspace amenity]
+
+  - id: pt_internet_70
+    request: "Procuro um apartamento no Porto até 70€ por noite com internet boa para trabalhar."
+    intent: {city: porto, max_price: 70, must_have: [], preferences: [wifi, workspace]}
+    expect: results
+    must_not: [live availability]
+
+  - id: fr_calm_gym_120
+    request: "Un logement calme à Porto pour moins de 120 € la nuit, avec une salle de sport à proximité."
+    intent: {city: porto, max_price: 120, must_have: [], preferences: [quiet, gym_nearby]}
+    expect: results
+    must_not: [a gym distance not from the map data]
+
+  - id: es_oporto_metro_100
+    request: "Busco piso en Oporto por menos de 100€ con buen wifi y cerca del metro."
+    intent: {city: porto, max_price: 100, must_have: [], preferences: [wifi, transport]}
+    expect: results
+    must_not: [metro distance in meters (no transport map data yet)]
+
+  - id: metro_150
+    request: "Somewhere well connected by metro in Porto, under €150."
+    intent: {city: porto, max_price: 150, must_have: [], preferences: [transport]}
+    expect: results
+    must_not: [metro distance in meters (no transport map data yet)]
+
+  - id: gym_must_60
+    request: "The place must have a gym. Porto, under €60."
+    intent: {city: porto, max_price: 60, must_have: [gym_nearby], preferences: [gym_nearby]}
+    expect: results
+    notes: "Few listings claim a gym; an honest 'only N options' or no_results is fine."
+    must_not: [a listing without a gym amenity]
+
+  - id: impossible_budget_20
+    request: "Porto, under €20 a night, fast wifi and a gym."
+    intent: {city: porto, max_price: 20, must_have: [], preferences: [wifi, gym_nearby]}
+    expect: no_results
+    must_not: [any listing above €20]
+
+  - id: lisbon
+    request: "Find me a place in Lisbon under €100 with good wifi."
+    intent: {city: lisbon, max_price: 100, must_have: [], preferences: [wifi]}
+    expect: unsupported_city
+    must_not: [any Porto listing presented as Lisbon]
+
+  - id: gaia_boundary
+    request: "A place in Vila Nova de Gaia under €100 with a desk."
+    intent: {city: vila nova de gaia, max_price: 100, must_have: [], preferences: [workspace]}
+    expect: unsupported_city
+    must_not: [any Porto listing presented as Gaia]
+
+  - id: usd_budget
+    request: "Porto under $100 a night with good wifi."
+    intent: {city: porto, max_price: null, must_have: [], preferences: [wifi]}
+    expect: unsupported_currency
+    must_not: [a converted budget, an exchange rate]
+
+  - id: no_budget_remote_work
+    request: "What's the best place in Porto for remote work?"
+    intent: {city: porto, max_price: null, must_have: [], preferences: [wifi, workspace, quiet]}
+    expect: results
+    must_not: [live availability]
+
+  - id: mbps_100
+    request: "I need at least 100 Mbps. Porto, under €130."
+    intent: {city: porto, max_price: 130, must_have: [], preferences: [wifi]}
+    expect: results
+    notes: "Only host-listed speed tests may be quoted as Mbps."
+    must_not: [a speed for a listing without a listed speed test]
+
+  - id: light_sleeper_110
+    request: "I'm a light sleeper, I need something really quiet in Porto under €110."
+    intent: {city: porto, max_price: 110, must_have: [], preferences: [quiet]}
+    expect: results
+    must_not: [quiet claimed by the host as evidence (only guests can tell)]
+
+  - id: two_weeks_nomad_120
+    request: "Two weeks in Porto working remotely: desk, good wifi and a gym close by, under €120."
+    intent: {city: porto, max_price: 120, must_have: [], preferences: [workspace, wifi, gym_nearby]}
+    expect: results
+    must_not: [live availability for the two weeks]
+
+  - id: availability_dates
+    request: "Find a place in Porto under €100 with wifi that is free from Nov 3 to Nov 17."
+    intent: {city: porto, max_price: 100, must_have: [], preferences: [wifi]}
+    expect: results
+    notes: "Must say availability cannot be checked."
+    must_not: [any statement that a listing is available on those dates]
+
+  - id: current_price
+    request: "What's the current price of the cheapest place with a gym nearby in Porto?"
+    intent: {city: porto, max_price: null, must_have: [], preferences: [gym_nearby]}
+    expect: results
+    notes: "Price must be presented as indicative on the snapshot date."
+    must_not: [a price presented as current]
+
+  - id: uppercase_city
+    request: "PORTO, under 100, quiet please"
+    intent: {city: porto, max_price: 100, must_have: [], preferences: [quiet]}
+    expect: results
+    must_not: [live availability]
+
+  - id: cheap_no_needs_50
+    request: "Cheap place in Porto under €50."
+    intent: {city: porto, max_price: 50, must_have: [], preferences: []}
+    expect: results
+    must_not: [any listing above €50]
+
+  - id: zoom_wifi_80
+    request: "Porto under €80 with wifi good enough for Zoom."
+    intent: {city: porto, max_price: 80, must_have: [], preferences: [wifi]}
+    expect: results
+    notes: "Listings whose guests contradict the wifi claim must be flagged or demoted."
+    must_not: [a contradicted wifi claim presented as reliable]
+
+  - id: group_of_4
+    request: "Porto under €100 for 4 people with good wifi."
+    intent: {city: porto, max_price: 100, must_have: [], preferences: [wifi]}
+    expect: results
+    notes: "Group size is not filtered in the MVP; the answer must say so."
+    must_not: [a claim that a listing fits 4 people without checking]
+
+  - id: pets
+    request: "Pet-friendly place in Porto under €90 with wifi."
+    intent: {city: porto, max_price: 90, must_have: [], preferences: [wifi]}
+    expect: results
+    notes: "Pets are not an aspect; the answer must not claim pet-friendliness."
+    must_not: [pet-friendliness]
+
+  - id: workspace_quiet_75
+    request: "Budget 75 EUR per night in Porto, I need quiet and a desk."
+    intent: {city: porto, max_price: 75, must_have: [], preferences: [quiet, workspace]}
+    expect: results
+    must_not: [live availability]
+
+  - id: gym_quiet_wifi_no_budget
+    request: "Quiet apartment in Porto near a gym, with Wi-Fi I can trust."
+    intent: {city: porto, max_price: null, must_have: [], preferences: [quiet, gym_nearby, wifi]}
+    expect: results
+    must_not: [a gym distance not from the map data]

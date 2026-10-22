@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-22",
+  "commit": "45e5cfc",
+  "city": "porto",
+  "gold": "eval\\labels\\retrieval_gold.jsonl",
+  "gold_labels": 2169,
+  "queries": {
+    "quiet": 30,
+    "wifi": 29,
+    "workspace": 9
+  },
+  "overall": {
+    "hybrid:e5-small": {
+      "recall@4": 0.7712,
+      "recall@10": 0.8871,
+      "mrr": 0.9164,
+      "ndcg@10": 0.8357
+    },
+    "hybrid:multilingual-minilm": {
+      "recall@4": 0.7604,
+      "recall@10": 0.8958,
+      "mrr": 0.9352,
+      "ndcg@10": 0.8441
+    },
+    "keywords": {
+      "recall@4": 0.7354,
+      "recall@10": 0.8686,
+      "mrr": 0.9179,
+      "ndcg@10": 0.8116
+    },
+    "hybrid:minilm": {
+      "recall@4": 0.7329,
+      "recall@10": 0.8783,
+      "mrr": 0.909,
+      "ndcg@10": 0.8201
+    },
+    "e5-small": {
+      "recall@4": 0.515,
+      "recall@10": 0.755,
+      "mrr": 0.63,
+      "ndcg@10": 0.5601
+    },
+    "multilingual-minilm": {
+      "recall@4": 0.486,
+      "recall@10": 0.7346,
+      "mrr": 0.6692,
+      "ndcg@10": 0.5961
+    },
+    "minilm": {
+      "recall@4": 0.4449,
+      "recall@10": 0.765,
+      "mrr": 0.6153,
+      "ndcg@10": 0.5492
+    }
+  },
+  "by_aspect": {
+    "quiet|e5-small": {
+      "recall@4": 0.3646,
+      "recall@10": 0.5913,
+      "mrr": 0.6987,
+      "ndcg@10": 0.4955
+    },
+    "quiet|hybrid:e5-small": {
+      "recall@4": 0.6024,
+      "recall@10": 0.7442,
+      "mrr": 0.8998,
+      "ndcg@10": 0.7252
+    },
+    "quiet|hybrid:minilm": {
+      "recall@4": 0.5741,
+      "recall@10": 0.7575,
+      "mrr": 0.8965,
+      "ndcg@10": 0.7326
+    },
+    "quiet|hybrid:multilingual-minilm": {
+      "recall@4": 0.5863,
+      "recall@10": 0.7972,
+      "mrr": 0.9417,
+      "ndcg@10": 0.7639
+    },
+    "quiet|keywords": {
+      "recall@4": 0.5741,
+      "recall@10": 0.7855,
+      "mrr": 0.9437,
+      "ndcg@10": 0.7563
+    },
+    "quiet|minilm": {
+      "recall@4": 0.3113,
+      "recall@10": 0.5774,
+      "mrr": 0.6729,
+      "ndcg@10": 0.4778
+    },
+    "quiet|multilingual-minilm": {
+      "recall@4": 0.3004,
+      "recall@10": 0.6406,
+      "mrr": 0.6644,
+      "ndcg@10": 0.5139
+    },
+    "wifi|e5-small": {
+      "recall@4": 0.6063,
+      "recall@10": 0.8483,
+      "mrr": 0.6255,
+      "ndcg@10": 0.6259
+    },
+    "wifi|hybrid:e5-small": {
+      "recall@4": 0.9609,
+      "recall@10": 1.0,
+      "mrr": 1.0,
+      "ndcg@10": 0.9789
+    },
+    "wifi|hybrid:minilm": {
+      "recall@4": 0.9523,
+      "recall@10": 1.0,
+      "mrr": 1.0,
+      "ndcg@10": 0.9634
+    },
+    "wifi|hybrid:multilingual-minilm": {
+      "recall@4": 0.9523,
+      "recall@10": 1.0,
+      "mrr": 0.9828,
+      "ndcg@10": 0.9589
+    },
+    "wifi|keywords": {
+      "recall@4": 0.9408,
+      "recall@10": 1.0,
+      "mrr": 0.9828,
+      "ndcg@10": 0.9388
+    },
+    "wifi|minilm": {
+      "recall@4": 0.5833,
+      "recall@10": 0.9207,
+      "mrr": 0.6425,
+      "ndcg@10": 0.6557
+    },
+    "wifi|multilingual-minilm": {
+      "recall@4": 0.7253,
+      "recall@10": 0.8701,
+      "mrr": 0.7672,
+      "ndcg@10": 0.7438
+    },
+    "workspace|e5-small": {
+      "recall@4": 0.7222,
+      "recall@10": 1.0,
+      "mrr": 0.4157,
+      "ndcg@10": 0.5632
+    },
+    "workspace|hybrid:e5-small": {
+      "recall@4": 0.7222,
+      "recall@10": 1.0,
+      "mrr": 0.7028,
+      "ndcg@10": 0.7427
+    },
+    "workspace|hybrid:minilm": {
+      "recall@4": 0.5556,
+      "recall@10": 0.8889,
+      "mrr": 0.6578,
+      "ndcg@10": 0.65
+    },
+    "workspace|hybrid:multilingual-minilm": {
+      "recall@4": 0.7222,
+      "recall@10": 0.8889,
+      "mrr": 0.7603,
+      "ndcg@10": 0.7416
+    },
+    "workspace|keywords": {
+      "recall@4": 0.6111,
+      "recall@10": 0.7222,
+      "mrr": 0.6227,
+      "ndcg@10": 0.586
+    },
+    "workspace|minilm": {
+      "recall@4": 0.4444,
+      "recall@10": 0.8889,
+      "mrr": 0.3353,
+      "ndcg@10": 0.4437
+    },
+    "workspace|multilingual-minilm": {
+      "recall@4": 0.3333,
+      "recall@10": 0.6111,
+      "mrr": 0.3694,
+      "ndcg@10": 0.3943
+    }
+  }
+}
