@@ -10,6 +10,8 @@ the evidence). Methods:
   <model>          cosine similarity, best over the aspect's queries
   keywords         chunks that mention the aspect first (domain.aspects), then text order
   hybrid:<model>   keyword mentions first, the model's similarity breaks ties
+  bm25             BM25 with the aspect's (English) queries, IDF from the city's review chunks
+  rrf:bm25+<model> Reciprocal Rank Fusion of BM25 and the model, per listing
 Writes eval/reports/retrieval_<date>.json.
 """
 
@@ -22,17 +24,28 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from constants import processedDir
+from constants import processedDir, refinedDir
 from domain.aspects import ASPECTS
 from eval.metrics import ndcgAtK, recallAtK, reciprocalRank
 from eval.pool_retrieval import reviewWindows
+from retrieval.chunk_index import CHUNKS_FILE
 from retrieval.embeddings import EMBEDDING_MODELS, embedTexts
+from retrieval.lexical import BM25, reciprocalRankFusion
 
 GOLD = Path("eval/labels/retrieval_gold.jsonl")
 REPORTS = Path("eval/reports")
 
 
-def methodScores(windows: pd.DataFrame, aspects: list[str]) -> dict[str, dict[str, np.ndarray]]:
+def fusePerListing(windows: pd.DataFrame, *scores: np.ndarray) -> np.ndarray:
+    """RRF inside each listing: the search ranks one listing's chunks at a time."""
+    fused = np.zeros(len(windows))
+    for rows in windows.groupby("listing_id").indices.values():
+        fused[rows] = reciprocalRankFusion(*(s[rows] for s in scores))
+    return fused
+
+
+def methodScores(windows: pd.DataFrame, aspects: list[str],
+                 bm25: BM25 | None = None) -> dict[str, dict[str, np.ndarray]]:
     """method -> aspect -> score per window (higher = earlier)."""
     mentions = {a: windows["text"].map(lambda t, a=a: bool(ASPECTS[a].keywords.search(t))).to_numpy(float)
                 for a in aspects}
@@ -46,6 +59,15 @@ def methodScores(windows: pd.DataFrame, aspects: list[str]) -> dict[str, dict[st
         methods[key] = semantic
         # similarity is in [-1, 1], so +2 puts every mention ahead
         methods[f"hybrid:{key}"] = {a: semantic[a] + 2 * mentions[a] for a in aspects}
+
+    if bm25 is not None:
+        docs = bm25.transform(windows["text"].tolist())
+        lexical = {a: bm25.score(" ".join(ASPECTS[a].queries), docs) for a in aspects}
+        methods["bm25"] = lexical
+        for key in sorted(EMBEDDING_MODELS):
+            methods[f"rrf:bm25+{key}"] = {
+                a: fusePerListing(windows, lexical[a], methods[key][a]) for a in aspects
+            }
     return methods
 
 
@@ -92,7 +114,10 @@ def main(argv: list[str] | None = None) -> None:
     windows = windows.reset_index(drop=True)
 
     aspects = sorted(gold["aspect"].unique())
-    results = evaluate(windows, gold, methodScores(windows, aspects))
+    # IDF from every review chunk of the city, as the search would use
+    chunks = pd.read_parquet(refinedDir(args.city, 2) / CHUNKS_FILE, columns=["source", "text"])
+    bm25 = BM25().fit(chunks.loc[chunks["source"] == "review", "text"].tolist())
+    results = evaluate(windows, gold, methodScores(windows, aspects, bm25))
 
     metrics = ["recall@4", "recall@10", "mrr", "ndcg@10"]
     overall = results.groupby("method")[metrics].mean().sort_values("recall@4", ascending=False)
