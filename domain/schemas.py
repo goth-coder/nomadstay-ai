@@ -38,6 +38,11 @@ class Listing(BaseModel):
     claims: dict[str, str] = {}  # aspect -> raw amenity that claims it
     wifi_mbps: int | None = None  # host speed test listed as an amenity
 
+    # Straight-line distance to the nearest mapped gym (OpenStreetMap).
+    # Airbnb shifts coordinates up to ~150 m, so it is approximate.
+    nearest_gym_m: float | None = Field(default=None, ge=0)
+    nearest_gym_name: str | None = None
+
     rating: float | None = Field(default=None, ge=0, le=5)
     number_of_reviews: int = 0
     last_review: dt.date | None = None
