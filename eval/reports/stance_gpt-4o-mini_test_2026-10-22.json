@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-22",
+  "commit": "b6e9bb8",
+  "model": "gpt-4o-mini",
+  "gold": "eval\\labels\\stance_gold.jsonl",
+  "split": "test",
+  "n": 148,
+  "overall": {
+    "per_class": {
+      "supports": {
+        "precision": 0.9183673469387755,
+        "recall": 0.967741935483871,
+        "f1": 0.9424083769633509,
+        "support": 93
+      },
+      "contradicts": {
+        "precision": 0.9310344827586207,
+        "recall": 0.9310344827586207,
+        "f1": 0.9310344827586207,
+        "support": 29
+      },
+      "irrelevant": {
+        "precision": 0.8571428571428571,
+        "recall": 0.6923076923076923,
+        "f1": 0.7659574468085107,
+        "support": 26
+      }
+    },
+    "macro_f1": 0.8798001021768274,
+    "contradiction_recall": 0.9310344827586207,
+    "accuracy": 0.9121621621621622
+  },
+  "by_aspect": {
+    "gym_nearby": {
+      "per_class": {
+        "supports": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 11
+        },
+        "contradicts": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        },
+        "irrelevant": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1
+        }
+      },
+      "macro_f1": 1.0,
+      "contradiction_recall": 1.0,
+      "accuracy": 1.0
+    },
+    "quiet": {
+      "per_class": {
+        "supports": {
+          "precision": 0.875,
+          "recall": 1.0,
+          "f1": 0.9333333333333333,
+          "support": 14
+        },
+        "contradicts": {
+          "precision": 1.0,
+          "recall": 0.875,
+          "f1": 0.9333333333333333,
+          "support": 8
+        },
+        "irrelevant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        }
+      },
+      "macro_f1": 0.6222222222222222,
+      "contradiction_recall": 0.875,
+      "accuracy": 0.9130434782608695
+    },
+    "transport": {
+      "per_class": {
+        "supports": {
+          "precision": 0.9130434782608695,
+          "recall": 0.9545454545454546,
+          "f1": 0.9333333333333332,
+          "support": 22
+        },
+        "contradicts": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "irrelevant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        }
+      },
+      "macro_f1": 0.31111111111111106,
+      "contradiction_recall": 0.0,
+      "accuracy": 0.875
+    },
+    "wifi": {
+      "per_class": {
+        "supports": {
+          "precision": 0.96875,
+          "recall": 1.0,
+          "f1": 0.9841269841269841,
+          "support": 31
+        },
+        "contradicts": {
+          "precision": 0.9473684210526315,
+          "recall": 1.0,
+          "f1": 0.972972972972973,
+          "support": 18
+        },
+        "irrelevant": {
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571,
+          "support": 8
+        }
+      },
+      "macro_f1": 0.9380809380809381,
+      "contradiction_recall": 1.0,
+      "accuracy": 0.9649122807017544
+    },
+    "workspace": {
+      "per_class": {
+        "supports": {
+          "precision": 0.8125,
+          "recall": 0.8666666666666667,
+          "f1": 0.8387096774193549,
+          "support": 15
+        },
+        "contradicts": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "support": 1
+        },
+        "irrelevant": {
+          "precision": 0.8461538461538461,
+          "recall": 0.7333333333333333,
+          "f1": 0.7857142857142856,
+          "support": 15
+        }
+      },
+      "macro_f1": 0.7636968766001023,
+      "contradiction_recall": 1.0,
+      "accuracy": 0.8064516129032258
+    }
+  },
+  "quote_validity": 1.0,
+  "usage": {
+    "input_tokens": 38712,
+    "output_tokens": 6151,
+    "calls": 20
+  },
+  "cost_usd": 0.0094974,
+  "confusion": {
+    "contradicts": {
+      "contradicts": 27,
+      "irrelevant": 2,
+      "supports": 0
+    },
+    "irrelevant": {
+      "contradicts": 0,
+      "irrelevant": 18,
+      "supports": 3
+    },
+    "supports": {
+      "contradicts": 2,
+      "irrelevant": 6,
+      "supports": 90
+    }
+  }
+}

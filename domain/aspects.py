@@ -38,7 +38,8 @@ ASPECTS: dict[str, Aspect] = {
             amenity=re.compile(r"^(?:fast |pocket )?wifi\b|^ethernet connection$", re.IGNORECASE),
             keywords=words(
                 r"wi-?fi", r"wi fi", r"internet", r"mbps", r"router",
-                r"connection", r"connexion", r"conexi[oó]n", r"conex[aã]o",
+                # no bare "connection": too ambiguous ("connection to the airport")
+                r"connexion", r"conexi[oó]n", r"conex[aã]o",
                 r"verbindung", r"wlan",
             ),
             queries=[

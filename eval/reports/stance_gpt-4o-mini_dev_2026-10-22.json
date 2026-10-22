@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-22",
+  "commit": "b6e9bb8",
+  "model": "gpt-4o-mini",
+  "gold": "eval\\labels\\stance_gold.jsonl",
+  "split": "dev",
+  "n": 152,
+  "overall": {
+    "per_class": {
+      "supports": {
+        "precision": 0.9230769230769231,
+        "recall": 1.0,
+        "f1": 0.9600000000000001,
+        "support": 96
+      },
+      "contradicts": {
+        "precision": 0.8846153846153846,
+        "recall": 0.92,
+        "f1": 0.9019607843137256,
+        "support": 25
+      },
+      "irrelevant": {
+        "precision": 1.0,
+        "recall": 0.7096774193548387,
+        "f1": 0.8301886792452831,
+        "support": 31
+      }
+    },
+    "macro_f1": 0.8973831545196695,
+    "contradiction_recall": 0.92,
+    "accuracy": 0.9276315789473685
+  },
+  "by_aspect": {
+    "gym_nearby": {
+      "per_class": {
+        "supports": {
+          "precision": 0.9565217391304348,
+          "recall": 1.0,
+          "f1": 0.9777777777777777,
+          "support": 22
+        },
+        "contradicts": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "irrelevant": {
+          "precision": 1.0,
+          "recall": 0.8,
+          "f1": 0.888888888888889,
+          "support": 5
+        }
+      },
+      "macro_f1": 0.9333333333333333,
+      "contradiction_recall": 0.0,
+      "accuracy": 0.9629629629629629
+    },
+    "quiet": {
+      "per_class": {
+        "supports": {
+          "precision": 0.8571428571428571,
+          "recall": 1.0,
+          "f1": 0.923076923076923,
+          "support": 24
+        },
+        "contradicts": {
+          "precision": 1.0,
+          "recall": 0.8181818181818182,
+          "f1": 0.9,
+          "support": 11
+        },
+        "irrelevant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      },
+      "macro_f1": 0.6076923076923076,
+      "contradiction_recall": 0.8181818181818182,
+      "accuracy": 0.8918918918918919
+    },
+    "transport": {
+      "per_class": {
+        "supports": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 16
+        },
+        "contradicts": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "irrelevant": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        }
+      },
+      "macro_f1": 1.0,
+      "contradiction_recall": 0.0,
+      "accuracy": 1.0
+    },
+    "wifi": {
+      "per_class": {
+        "supports": {
+          "precision": 0.9615384615384616,
+          "recall": 1.0,
+          "f1": 0.9803921568627451,
+          "support": 25
+        },
+        "contradicts": {
+          "precision": 0.9285714285714286,
+          "recall": 1.0,
+          "f1": 0.962962962962963,
+          "support": 13
+        },
+        "irrelevant": {
+          "precision": 1.0,
+          "recall": 0.6,
+          "f1": 0.7499999999999999,
+          "support": 5
+        }
+      },
+      "macro_f1": 0.8977850399419026,
+      "contradiction_recall": 1.0,
+      "accuracy": 0.9534883720930233
+    },
+    "workspace": {
+      "per_class": {
+        "supports": {
+          "precision": 0.8181818181818182,
+          "recall": 1.0,
+          "f1": 0.9,
+          "support": 9
+        },
+        "contradicts": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "f1": 0.5,
+          "support": 1
+        },
+        "irrelevant": {
+          "precision": 1.0,
+          "recall": 0.7894736842105263,
+          "f1": 0.8823529411764706,
+          "support": 19
+        }
+      },
+      "macro_f1": 0.7607843137254902,
+      "contradiction_recall": 1.0,
+      "accuracy": 0.8620689655172413
+    }
+  },
+  "quote_validity": 0.9615384615384616,
+  "usage": {
+    "input_tokens": 44960,
+    "output_tokens": 6683,
+    "calls": 24
+  },
+  "cost_usd": 0.0107538,
+  "confusion": {
+    "contradicts": {
+      "contradicts": 23,
+      "irrelevant": 3,
+      "supports": 0
+    },
+    "irrelevant": {
+      "contradicts": 0,
+      "irrelevant": 22,
+      "supports": 0
+    },
+    "supports": {
+      "contradicts": 2,
+      "irrelevant": 6,
+      "supports": 96
+    }
+  }
+}
