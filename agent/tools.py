@@ -1,7 +1,7 @@
-from utils import parseData
-from rag import similaritySearch, VectorStore
-from data import HOTELS
-from settings import JUDGE_PROMPT
+from legacy.utils import parseData
+from retrieval.rag import similaritySearch, VectorStore
+from legacy.data import HOTELS
+from agent.settings import JUDGE_PROMPT
 import faiss
 import json
 import logging

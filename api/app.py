@@ -1,17 +1,17 @@
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
-from rag import loadOrBuildIndex
+from retrieval.rag import loadOrBuildIndex
 from openai import OpenAI
-from agent import runAgent
-from data import HOTELS
+from agent.agent import runAgent
+from legacy.data import HOTELS
 from dotenv import load_dotenv
 import os
 import logging
 from constants import *
 from contextlib import asynccontextmanager
 from logging_config import setupLogging
-from sessions import SessionStore, trimToLastTurns
-from auth import requireApiKey
+from api.sessions import SessionStore, trimToLastTurns
+from api.auth import requireApiKey
 
 load_dotenv()
 setupLogging()

@@ -6,13 +6,12 @@ so the NomadStay changes can't silently break the existing contracts.
 import json
 
 import pytest
-
-from agent import dispatcher, runAgent
 from conftest import fakeClient, judgeResponse, textResponse, toolCallResponse
-from data import HOTELS
-from rag import similaritySearch
-from tools import filter_hotels, get_hotel_info, retriever
 
+from agent.agent import dispatcher, runAgent
+from agent.tools import filter_hotels, get_hotel_info, retriever
+from legacy.data import HOTELS
+from retrieval.rag import similaritySearch
 
 # get_hotel_info
 

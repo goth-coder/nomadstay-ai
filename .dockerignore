@@ -5,3 +5,9 @@ __pycache__/
 *.pyc
 data/
 deploy/
+tests/
+eval/
+docs/
+.claude/
+.pytest_cache/
+.ruff_cache/

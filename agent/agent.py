@@ -17,10 +17,10 @@ import faiss
 from collections import deque
 import json
 from pprint import pprint
-from tools import filter_hotels, get_hotel_info, retriever
-from data import HOTELS
-from settings import tools_schema, SYSTEM_PROMPT
-from rag import VectorStore
+from agent.tools import filter_hotels, get_hotel_info, retriever
+from legacy.data import HOTELS
+from agent.settings import tools_schema, SYSTEM_PROMPT
+from retrieval.rag import VectorStore
 
 load_dotenv()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -106,7 +106,7 @@ def runAgent(
 
 
 if __name__ == "__main__":
-    from rag import loadOrBuildIndex
+    from retrieval.rag import loadOrBuildIndex
     from logging_config import setupLogging
 
     setupLogging()

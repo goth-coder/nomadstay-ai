@@ -1,7 +1,7 @@
 import numpy as np
 import faiss
-from data import HOTELS
-from utils import parseData
+from legacy.data import HOTELS
+from legacy.utils import parseData
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 import os
@@ -11,7 +11,7 @@ import json
 import logging
 from functools import lru_cache
 from constants import *
-from s3 import downloadFromS3, uploadToS3
+from storage.s3 import downloadFromS3, uploadToS3
 
 load_dotenv(override=True)
 from dataclasses import dataclass

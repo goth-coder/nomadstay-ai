@@ -41,7 +41,6 @@ python-dotenv==1.2.4
 pyyaml==6.0.3
 regex==2026.9.29
 rich==15.0.0
-ruff==0.17.1
 s3transfer==0.19.3
 safetensors==0.8.0
 scikit-learn==1.9.1

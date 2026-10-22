@@ -1,8 +1,9 @@
 import logging
 import os
 
-# Project modules ("__main__" when running `python agent.py`)
-APP_LOGGERS = ("__main__", "app", "agent", "rag", "tools", "s3", "sessions")
+# Project packages; submodules (e.g. "agent.tools") inherit the level.
+# "__main__" when running `python -m agent.agent`
+APP_LOGGERS = ("__main__", "api", "agent", "domain", "retrieval", "storage", "legacy")
 
 
 def setupLogging():

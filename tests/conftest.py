@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import rag
+from retrieval import rag
 
 
 class FakeResponses:
