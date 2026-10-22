@@ -1,9 +1,10 @@
 import json
+import re
+from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
-
-from retrieval import rag
 
 
 class FakeResponses:
@@ -25,16 +26,12 @@ class FakeResponses:
 
 
 def fakeClient(*outputs) -> SimpleNamespace:
-    return SimpleNamespace(responses=FakeResponses(outputs))
+    return SimpleNamespace(responses=FakeResponses(outputs), close=lambda: None)
 
 
 def textResponse(text: str) -> SimpleNamespace:
     # Final answer: a single "message" item, no tool calls
     return SimpleNamespace(output_text=text, output=[SimpleNamespace(type="message")])
-
-
-def judgeResponse(flags: list[bool]) -> SimpleNamespace:
-    return SimpleNamespace(output_text=json.dumps({"relevant": flags}), output=[])
 
 
 class FakeFunctionCall(SimpleNamespace):
@@ -54,16 +51,79 @@ def toolCallResponse(name: str, args: dict, call_id: str = "call_1") -> SimpleNa
     return SimpleNamespace(output_text="", output=[item])
 
 
+# ---------- artifact set built from the mini_porto fixture ----------
+
+FIXTURES = Path(__file__).parent / "fixtures"
+MINI = FIXTURES / "mini_porto"
+MODEL = "multilingual-minilm"
+
+
 @pytest.fixture(scope="session")
-def v1_store(tmp_path_factory) -> rag.VectorStore:
+def processed(tmp_path_factory):
+    # What T2 leaves behind: ingest + OSM step on the mini_porto fixture
+    from ingest import osm
+    from ingest.insideairbnb import ingest, readListings, updateReport, writeListings
+
+    snapshot = json.loads((MINI / "expected.json").read_text(encoding="utf-8"))["snapshot_date"]
+    out = tmp_path_factory.mktemp("processed")
+    ingest(MINI / "listings.csv", MINI / "reviews.csv", out, "porto", snapshot)
+    raw = json.loads((FIXTURES / "overpass_gyms.json").read_text(encoding="utf-8"))
+    pois = osm.parsePois(raw)
+    pois.to_parquet(out / "pois.parquet", index=False)
+    writeListings(osm.addNearestPoi(readListings(out / "listings.parquet"), pois),
+                  out / "listings.parquet")
+    updateReport(out / "ingest_report.json", "osm",
+                 {"attribution": osm.ATTRIBUTION, "fetched_date": "2026-10-22"})
+    return out
+
+
+@pytest.fixture(scope="session")
+def built(processed, tmp_path_factory):
+    from ingest.build import buildArtifacts
+
+    out = tmp_path_factory.mktemp("refined")
+    manifest = buildArtifacts(processed, out, "porto", MODEL, 2)
+    return out, manifest
+
+
+# ---------- serving set (index set + evidence) ----------
+
+NEGATIVE = re.compile(r"dropped|slow|unreliable|no funcionaba|noisy|loud|ruidoso|no desk|tiny shelf",
+                      re.IGNORECASE)
+
+
+def fakeStances(reviews: pd.DataFrame) -> pd.DataFrame:
     """
-    Builds the v1 index (data.HOTELS) in a temp dir,
-    without touching data/refined or S3.
+    Rule-based stand-in for the LLM judge (ingest/stance.py output format):
+    every aspect mention judged by simple rules, the quote is the first sentence.
+    Tests check the plumbing; the real judge is measured in eval/.
     """
-    artifact_dir = tmp_path_factory.mktemp("artifacts")
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(rag, "ARTIFACT_DIR", artifact_dir)
-        mp.setattr(rag, "INDEX_PATH", artifact_dir / "hotels.index")
-        mp.setattr(rag, "DOCS_PATH", artifact_dir / "hotels_doc.json")
-        index, docs = rag.buildIndex()
-    return rag.VectorStore(index, docs)
+    from domain.aspects import mentionedAspects
+
+    rows = []
+    for r in reviews.itertuples():
+        text = r.comments
+        quote = re.split(r"(?<=[.!?])\s", text)[0]
+        for aspect in sorted(mentionedAspects(text)):
+            if "ignore all previous" in text.lower():
+                stance, strength, start = "irrelevant", 0, None
+            else:
+                stance = "contradicts" if NEGATIVE.search(text) else "supports"
+                strength, start = 2, text.find(quote)
+            rows.append({"review_id": r.review_id, "listing_id": r.listing_id, "aspect": aspect,
+                         "stance": stance, "strength": strength, "quote_start": start,
+                         "quote_end": start + len(quote) if start is not None else None,
+                         "quote_valid": start is not None})
+    return pd.DataFrame(rows)
+
+
+@pytest.fixture(scope="session")
+def serving(built, processed, tmp_path_factory):
+    """The set the API loads, packaged like ingest/package.py does it."""
+    from ingest.package import packageServingSet
+
+    fakeStances(pd.read_parquet(processed / "reviews.parquet")).to_parquet(
+        processed / "stances.parquet", index=False)
+    out = tmp_path_factory.mktemp("serving")
+    packageServingSet(built[0], processed, out, 3)
+    return out

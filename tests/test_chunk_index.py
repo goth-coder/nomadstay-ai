@@ -12,7 +12,7 @@ from constants import CITY_CONFIG, refinedDir
 from domain.schemas import Chunk
 from ingest import osm
 from ingest.build import buildArtifacts
-from ingest.insideairbnb import ingest, readListings, updateReport, writeListings
+from ingest.insideairbnb import ingest
 from retrieval import embeddings
 from retrieval.chunk_index import (
     ARTIFACT_FILES,
@@ -32,28 +32,6 @@ SNAPSHOT = EXPECTED["snapshot_date"]
 MODEL = "multilingual-minilm"  # default chosen by the T3 benchmark
 WIFI_DROPS = "32235516"  # Bolhão Central Studio, complains about wifi
 FRENCH = "40001013"
-
-
-@pytest.fixture(scope="module")
-def processed(tmp_path_factory):
-    # What T2 leaves behind: ingest + OSM step on the mini_porto fixture
-    out = tmp_path_factory.mktemp("processed")
-    ingest(MINI / "listings.csv", MINI / "reviews.csv", out, "porto", SNAPSHOT)
-    raw = json.loads((FIXTURES / "overpass_gyms.json").read_text(encoding="utf-8"))
-    pois = osm.parsePois(raw)
-    pois.to_parquet(out / "pois.parquet", index=False)
-    writeListings(osm.addNearestPoi(readListings(out / "listings.parquet"), pois),
-                  out / "listings.parquet")
-    updateReport(out / "ingest_report.json", "osm",
-                 {"attribution": osm.ATTRIBUTION, "fetched_date": "2026-10-22"})
-    return out
-
-
-@pytest.fixture(scope="module")
-def built(processed, tmp_path_factory):
-    out = tmp_path_factory.mktemp("refined")
-    manifest = buildArtifacts(processed, out, "porto", MODEL, 2)
-    return out, manifest
 
 
 @pytest.fixture(scope="module")
@@ -294,17 +272,3 @@ def test_download_artifacts_missing_version_raises_404(fakeS3, tmp_path):
     with pytest.raises(ClientError) as error:
         s3.downloadArtifacts(9, "porto", tmp_path, ["chunks.index"])
     assert error.value.response["Error"]["Code"] == "404"
-
-
-def test_v1_s3_functions_keep_their_keys(fakeS3, tmp_path, monkeypatch):
-    monkeypatch.setattr(s3, "ARTIFACT_DIR", tmp_path)
-    monkeypatch.setattr(s3, "INDEX_PATH", tmp_path / "hotels.index")
-    monkeypatch.setattr(s3, "DOCS_PATH", tmp_path / "hotels_doc.json")
-    (tmp_path / "hotels.index").write_bytes(b"i")
-    (tmp_path / "hotels_doc.json").write_bytes(b"d")
-    s3.uploadToS3(1)
-    assert set(fakeS3.objects) == {(s3.BUCKET, "rag/v1/hotels.index"),
-                                   (s3.BUCKET, "rag/v1/hotels_doc.json")}
-    (tmp_path / "hotels.index").unlink()
-    s3.downloadFromS3(1)
-    assert (tmp_path / "hotels.index").read_bytes() == b"i"

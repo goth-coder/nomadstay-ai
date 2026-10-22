@@ -3,7 +3,7 @@ import os
 
 # Project packages; submodules (e.g. "agent.tools") inherit the level.
 # "__main__" when running `python -m agent.agent`
-APP_LOGGERS = ("__main__", "api", "agent", "domain", "retrieval", "storage", "legacy")
+APP_LOGGERS = ("__main__", "api", "agent", "domain", "retrieval", "storage", "ingest")
 
 
 def setupLogging():

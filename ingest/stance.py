@@ -211,6 +211,25 @@ def run(args, client: OpenAI) -> None:
     writeResults(out_dir, rows, total, args.model, "direct")
 
 
+def evidenceTable(stances: pd.DataFrame, reviews: pd.DataFrame) -> pd.DataFrame:
+    """
+    Serving table for the search: one row per judged (review, aspect), with the
+    review date and the quote text cut from the review by its offsets (so it
+    is verbatim by construction). Irrelevant rows are kept without a quote:
+    they tell the search which reviews were already judged.
+    """
+    texts = reviews.set_index("review_id")
+    out = stances[["listing_id", "review_id", "aspect", "stance", "strength"]].copy()
+    out["date"] = out["review_id"].map(texts["date"])
+    quotes = []
+    for row in stances.itertuples():
+        valid = row.quote_valid and not pd.isna(row.quote_start)
+        quotes.append(texts.at[row.review_id, "comments"][int(row.quote_start):int(row.quote_end)]
+                      if valid else None)
+    out["quote"] = quotes
+    return out.reset_index(drop=True)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Precompute review stances per aspect")
     parser.add_argument("command", choices=["submit", "collect", "run"])

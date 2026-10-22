@@ -23,6 +23,6 @@ def test_submodule_loggers_inherit_the_project_level(monkeypatch):
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
     setupLogging()
 
-    for name in ("agent.tools", "retrieval.rag", "storage.s3", "api.app"):
+    for name in ("agent.nomad", "retrieval.catalog", "storage.s3", "api.app"):
         assert logging.getLogger(name).getEffectiveLevel() == logging.DEBUG, name
     assert logging.getLogger("botocore").getEffectiveLevel() == logging.WARNING

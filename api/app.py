@@ -1,17 +1,18 @@
-from fastapi import Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
-from retrieval.rag import loadOrBuildIndex
-from openai import OpenAI
-from agent.agent import runAgent
-from legacy.data import HOTELS
-from dotenv import load_dotenv
-import os
+import json
 import logging
-from constants import *
+import os
 from contextlib import asynccontextmanager
-from logging_config import setupLogging
-from api.sessions import SessionStore, trimToLastTurns
+
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Request
+from openai import OpenAI
+from pydantic import BaseModel, Field
+
+from agent.agent import runAgent
+from agent.nomad import loadStore, unverifiedQuotes
 from api.auth import requireApiKey
+from api.sessions import SessionStore, trimToLastTurns
+from logging_config import setupLogging
 
 load_dotenv()
 setupLogging()
@@ -20,14 +21,22 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MAX_TURNS = int(os.environ.get("MAX_TURNS", "10"))
 
+
+def vectorCount(store) -> int:
+    return store.index.index.ntotal if store.index is not None else 0
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Fail closed: without a key the protected routes would reject everything
     if not os.environ.get("API_KEY"):
         raise RuntimeError("API_KEY is not set")
 
-    app.state.v_store = loadOrBuildIndex()
-    logger.info("Startup complete: %s vectors loaded", app.state.v_store.index.ntotal)
+    app.state.store = loadStore()  # serving set: local copy, or downloaded from S3
+    catalog = app.state.store.catalog
+    logger.info("Startup complete: %s listings in %s (snapshot %s), %s vectors",
+                len(catalog.listings), catalog.city, catalog.snapshot_date,
+                vectorCount(app.state.store))
     app.state.client = OpenAI(api_key=OPENAI_API_KEY)
     app.state.sessions = SessionStore(
         ttl_seconds=int(os.environ.get("SESSION_TTL_SECONDS", "1800")),
@@ -47,13 +56,33 @@ class AgentRequest(BaseModel):
 
 @app.get("/health")
 def healthcheck(http: Request) -> dict:
-    return {"status": "alive", "vectors": http.app.state.v_store.index.ntotal}
+    store = http.app.state.store
+    return {
+        "status": "alive",
+        "vectors": vectorCount(store),
+        "city": store.catalog.city,
+        "listings": len(store.catalog.listings),
+        "snapshot_date": store.catalog.snapshot_date,
+    }
 
+
+def toolOutputs(items: list) -> list[dict]:
+    """Search results of this turn, in the shape unverifiedQuotes reads."""
+    outputs = []
+    for item in items:
+        if item.get("type") != "function_call_output":
+            continue
+        output = json.loads(item["output"])
+        if "results" in output:  # search_stays
+            outputs.append(output)
+        elif "aspects" in output:  # get_stay_details: one stay
+            outputs.append({"results": [output]})
+    return outputs
 
 
 @app.post("/agent/run", dependencies=[Depends(requireApiKey)])
 def askAgent(request: AgentRequest, http: Request) -> dict:
-    v_store = http.app.state.v_store 
+    store = http.app.state.store
     client = http.app.state.client
     sessions = http.app.state.sessions
 
@@ -69,18 +98,24 @@ def askAgent(request: AgentRequest, http: Request) -> dict:
 
     context.append({"role": "user", "content": request.message})
     trimToLastTurns(context, MAX_TURNS)
+    turn_start = len(context)
 
     try:
-        answer = runAgent(context, client, v_store, 5)
-
-        return {"session_id": session_id, "answer": answer}
-
+        answer = runAgent(context, client, store, 5)
     except Exception:
         logger.exception("Agent execution failed session_id=%s", session_id)
         context.clear()
         context.extend(previous_context)
 
         raise HTTPException(status_code=500, detail="Agent execution failed")
+
+    response = {"session_id": session_id, "answer": answer}
+    # Citations the model made up or edited are reported, never silently passed on
+    unverified = unverifiedQuotes(answer, toolOutputs(list(context)[turn_start:]))
+    if unverified:
+        logger.warning("unverified quotes session_id=%s quotes=%s", session_id, unverified)
+        response["warnings"] = {"unverified_quotes": unverified}
+    return response
 
 
 @app.get("/agent/sessions/{session_id}", dependencies=[Depends(requireApiKey)])
