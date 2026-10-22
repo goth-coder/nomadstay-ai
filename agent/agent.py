@@ -9,17 +9,17 @@ O que o agente é capaz fazer:
   Grounding	Does Nordic   Loft offer airport transfers?
 """
 
-from openai import OpenAI
-from dotenv import load_dotenv
-import os, logging
-import numpy as np
-import faiss
-from collections import deque
 import json
+import logging
+import os
+from collections import deque
 from pprint import pprint
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from agent.settings import SYSTEM_PROMPT, tools_schema
 from agent.tools import filter_hotels, get_hotel_info, retriever
-from legacy.data import HOTELS
-from agent.settings import tools_schema, SYSTEM_PROMPT
 from retrieval.rag import VectorStore
 
 load_dotenv()
@@ -106,8 +106,8 @@ def runAgent(
 
 
 if __name__ == "__main__":
-    from retrieval.rag import loadOrBuildIndex
     from logging_config import setupLogging
+    from retrieval.rag import loadOrBuildIndex
 
     setupLogging()
     v_store = loadOrBuildIndex()  # FAISS vector store: index + hotels doc

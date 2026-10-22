@@ -1,12 +1,13 @@
-from legacy.utils import parseData
-from retrieval.rag import similaritySearch, VectorStore
-from legacy.data import HOTELS
-from agent.settings import JUDGE_PROMPT
-import faiss
 import json
 import logging
-from openai import OpenAI
+
 from dotenv import load_dotenv
+from openai import OpenAI
+
+from agent.settings import JUDGE_PROMPT
+from legacy.data import HOTELS
+from legacy.utils import parseData
+from retrieval.rag import VectorStore, similaritySearch
 
 load_dotenv()
 
