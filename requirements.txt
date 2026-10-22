@@ -33,6 +33,8 @@ numpy==2.5.4
 openai==3.35.1
 opentelemetry-api==1.45.1
 packaging==26.3
+pandas==3.1.0
+pyarrow==26.0.0
 pydantic==2.14.1
 pydantic-core==2.50.1
 pygments==2.21.0
@@ -61,5 +63,6 @@ truststore==0.10.5
 typer==0.27.3
 typing-extensions==4.16.0
 typing-inspection==0.4.4
+tzdata==2026.5
 urllib3==2.8.0
 uvicorn==0.54.0

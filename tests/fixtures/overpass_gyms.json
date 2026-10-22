@@ -1,0 +1,19 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API (fake fixture)",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-22T12:00:00Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {"type": "node", "id": 1001, "lat": 41.15, "lon": -8.61,
+     "tags": {"leisure": "fitness_centre", "name": "Gym Node"}},
+    {"type": "way", "id": 1001, "center": {"lat": 41.16, "lon": -8.62},
+     "nodes": [1, 2, 3],
+     "tags": {"leisure": "sports_centre", "sport": "fitness;climbing", "name": "Gym Way"}},
+    {"type": "node", "id": 1003, "lat": 41.14, "lon": -8.60,
+     "tags": {"amenity": "gym"}},
+    {"type": "relation", "id": 1004, "members": [],
+     "tags": {"leisure": "fitness_centre", "name": "No Coordinates"}}
+  ]
+}
