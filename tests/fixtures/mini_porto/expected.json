@@ -1,0 +1,220 @@
+{
+  "snapshot_date": "2026-09-19",
+  "listings": {
+    "1436961951661730861": {
+      "name": "Ribeira Nomad Loft",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "wifi_mbps": 300,
+      "stance": {
+        "wifi": "supports",
+        "workspace": "supports",
+        "quiet": "supports"
+      }
+    },
+    "32235516": {
+      "name": "Bolhão Central Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {
+        "wifi": "contradicts"
+      }
+    },
+    "12082304": {
+      "name": "Cedofeita Quiet Flat",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {
+        "wifi": "mixed",
+        "quiet": "supports"
+      }
+    },
+    "53655288": {
+      "name": "Galerias Party Apartment",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "stance": {
+        "quiet": "contradicts"
+      }
+    },
+    "1730176987514588989": {
+      "name": "Boavista Gym Residence",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "gym_nearby"
+      ],
+      "stance": {
+        "gym_nearby": "supports"
+      }
+    },
+    "40001006": {
+      "name": "Trindade Metro Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {
+        "transport": "supports",
+        "gym_nearby": "supports"
+      }
+    },
+    "40001007": {
+      "name": "Foz Sea View",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {}
+    },
+    "40001008": {
+      "name": "Aliados Budget Room",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "price": 45.0,
+      "price_status": "quote",
+      "stance": {}
+    },
+    "40001009": {
+      "name": "Bonfim Hidden Flat",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "price": null,
+      "price_status": "missing",
+      "stance": {}
+    },
+    "40001010": {
+      "name": "Gaia Riverside",
+      "in_porto": false,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "stance": {
+        "wifi": "supports",
+        "workspace": "supports"
+      }
+    },
+    "40001011": {
+      "name": "Matosinhos Beach House",
+      "in_porto": false,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {}
+    },
+    "40001012": {
+      "name": "Campanhã Worker Flat",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "stance": {
+        "workspace": "contradicts"
+      }
+    },
+    "40001013": {
+      "name": "Santa Catarina Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {
+        "wifi": "supports",
+        "quiet": "supports"
+      }
+    },
+    "40001014": {
+      "name": "Massarelos Apartment",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stance": {
+        "wifi": "contradicts",
+        "quiet": "contradicts"
+      }
+    },
+    "40001015": {
+      "name": "Lapa Garden Flat",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "stance": {
+        "wifi": "supports",
+        "quiet": "supports",
+        "gym_nearby": "supports"
+      }
+    },
+    "40001016": {
+      "name": "Sé Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "injection": true,
+      "stance": {
+        "wifi": "irrelevant"
+      }
+    },
+    "40001017": {
+      "name": "Baixa Classic Flat",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "stale": true,
+      "stance": {
+        "wifi": "supports"
+      }
+    },
+    "40001018": {
+      "name": "Paranhos Calm Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "gym_nearby"
+      ],
+      "stance": {}
+    },
+    "1052141614265835101": {
+      "name": "Ethernet Pro Loft",
+      "in_porto": true,
+      "claims": [
+        "wifi",
+        "workspace"
+      ],
+      "wifi_mbps": 500,
+      "price": 1050.0,
+      "stance": {
+        "wifi": "supports"
+      }
+    },
+    "40001020": {
+      "name": "Bonjardim New Studio",
+      "in_porto": true,
+      "claims": [
+        "wifi"
+      ],
+      "no_reviews": true,
+      "stance": {}
+    }
+  }
+}
