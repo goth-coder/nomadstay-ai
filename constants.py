@@ -27,3 +27,8 @@ def rawDir(city: str) -> Path:
 
 def processedDir(city: str) -> Path:
     return PROCESSED_DIR / city / CITY_CONFIG[city]["snapshot"]
+
+
+def refinedDir(city: str, version: int) -> Path:
+    # Artifact set the API loads (and S3 mirrors): index + chunks + listings + manifest
+    return ARTIFACT_DIR / f"v{version}" / city

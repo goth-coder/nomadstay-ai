@@ -32,8 +32,6 @@ def load_model() -> SentenceTransformer:
     )
 
 
-model = load_model()
-
 DIM = 384
 FORCE_REINGEST = os.environ.get("FORCE_REINGEST") == "True"
 
@@ -108,7 +106,7 @@ def createFaissIndex(dim=DIM):
 
 
 def embed_text(text: str) -> np.ndarray:
-    embedded_text = model.encode(text, normalize_embeddings=True)
+    embedded_text = load_model().encode(text, normalize_embeddings=True)
     return embedded_text.reshape(1, -1)
 
 
