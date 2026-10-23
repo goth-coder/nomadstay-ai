@@ -18,6 +18,7 @@ from pathlib import Path
 import pandas as pd
 from openai import OpenAI
 
+from agent.judge import judgeQuestion
 from constants import ARTIFACT_VERSION, CITY, EMBEDDING_MODEL, refinedDir
 from domain.aspects import ASPECTS
 from domain.ranking import RankedListing, RankingConfig, rankListings
@@ -27,10 +28,12 @@ from retrieval.catalog import DEFAULT_GYM_RADIUS_M, Catalog, normalizeCity
 from retrieval.chunk_index import LISTINGS_FILE, MANIFEST, ChunkIndex, loadChunkIndex
 from retrieval.evidence import (
     EVIDENCE_FILE,
+    QUESTION_CHUNKS_PER_LISTING,
     SERVING_FILES,
     EvidenceStore,
     judgeParaphrases,
     paraphraseCandidates,
+    questionCandidates,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,6 +43,8 @@ RESULTS = 5
 QUOTES_PER_STANCE = 1
 MAX_QUOTE_CHARS = 300
 CLAIMABLE = [a for a, spec in ASPECTS.items() if spec.amenity is not None]
+MAX_REVIEW_LISTINGS = 5  # search_reviews: bounds cost to <= 20 excerpts, <= 2 judge calls
+QUOTES_PER_LISTING = 3
 ATTRIBUTION = "Listings and reviews: Inside Airbnb (CC BY 4.0). Gyms: © OpenStreetMap contributors (ODbL)."
 
 
@@ -238,6 +243,53 @@ def get_stay_details(listing_id: str, aspects: list[str], store: NomadStore) -> 
     }
 
 
+def search_reviews(question: str, listing_ids: list[str], store: NomadStore,
+                   client: OpenAI | None = None) -> dict:
+    """
+    Open RAG over guest reviews: what guests say about any question (host,
+    kids, kitchen, stairs...) at the given stays. Hybrid retrieval inside each
+    listing, then an online judge with the question as the criterion; only
+    quotes verified against the review text are returned.
+    """
+    if store.index is None or client is None:
+        return {"status": "unavailable", "message": "Review search is not available right now."}
+    known = set(store.catalog.listings["listing_id"])
+    ids = [i for i in dict.fromkeys(listing_ids) if i in known][:MAX_REVIEW_LISTINGS]
+    if not ids:
+        return {"status": "not_found", "message": "Use listing_ids returned by search_stays."}
+
+    excerpts = questionCandidates(store.index, ids, question)
+    labels, usage = judgeQuestion(client, question,
+                                  [{"id": n, "text": e["text"]} for n, e in enumerate(excerpts)])
+    logger.info("search_reviews: %s listings, %s excerpts, usage %s", len(ids), len(excerpts), usage)
+
+    names = store.catalog.listings.set_index("listing_id")["name"]
+    listings = []
+    for listing_id in ids:
+        found = [(e, l) for e, l in zip(excerpts, labels) if e["listing_id"] == listing_id
+                 and l["stance"] in ("supports", "contradicts") and l["quote_valid"] and l["quote"]]
+        found.sort(key=lambda pair: pair[1]["stance"] != "contradicts")  # complaints first
+        listings.append({
+            "listing_id": listing_id,
+            "name": names[listing_id],
+            "guest_reports": {"supports": sum(l["stance"] == "supports" for _, l in found),
+                              "contradicts": sum(l["stance"] == "contradicts" for _, l in found)},
+            "guest_quotes": [
+                {"stance": l["stance"], "quote": l["quote"][:MAX_QUOTE_CHARS], "review_id": e["review_id"],
+                 "date": e["date"].isoformat() if e["date"] else None}
+                for e, l in found[:QUOTES_PER_LISTING]
+            ],
+        })
+    return {
+        "status": "ok",
+        "question": question,
+        "listings": listings,
+        "notes": [(f"Searched the {QUESTION_CHUNKS_PER_LISTING} most relevant review excerpts per stay. "
+                   "No quotes means no guest addressed it there, not that the answer is no.")],
+        "attribution": ATTRIBUTION,
+    }
+
+
 QUOTED = re.compile(r"[\"“”«»„]([^\"“”«»„]{8,})[\"“”«»„]")
 TYPOGRAPHY = str.maketrans({"’": "'", "‘": "'", "`": "'", "–": "-", "—": "-", "…": "..."})
 
@@ -246,19 +298,33 @@ def normalizeQuote(text: str) -> str:
     return " ".join(text.translate(TYPOGRAPHY).lower().split()).strip(" .")
 
 
+def quotableTexts(value) -> list[str]:
+    """Every text a tool output lets the model quote: guest quotes, listing
+    claims and host amenities, wherever they sit in the output."""
+    texts = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "guest_quotes":
+                texts += [q["quote"] for q in item]
+            elif key == "listing_claim" and item:
+                texts.append(item)
+            elif key == "host_amenities":
+                texts += list(item)
+            else:
+                texts += quotableTexts(item)
+    elif isinstance(value, list):
+        for item in value:
+            texts += quotableTexts(item)
+    return texts
+
+
 def unverifiedQuotes(answer: str, tool_outputs: list[dict]) -> list[str]:
     """
     Quoted passages (8+ chars, straight or typographic double quotes) in the
-    final answer that are neither a returned guest quote nor a listing claim.
-    Anything here is a citation the model made up or edited. Known gap: it does
-    not check that a real quote is attributed to the right listing.
+    final answer that no tool output contains. Anything here is a citation
+    the model made up or edited. Known gap: it does not check that a real
+    quote is attributed to the right listing.
     """
-    known = []
-    for out in tool_outputs:
-        for r in out.get("results", []):
-            for a in r["aspects"].values():
-                known += [normalizeQuote(q["quote"]) for q in a["guest_quotes"]]
-                if a.get("listing_claim"):
-                    known.append(normalizeQuote(a["listing_claim"]))
+    known = [normalizeQuote(t) for t in quotableTexts(tool_outputs)]
     return [m for m in QUOTED.findall(answer)
             if not any(normalizeQuote(m) in k for k in known)]

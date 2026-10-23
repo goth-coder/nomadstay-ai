@@ -13,12 +13,16 @@ How to search:
 - City, budget and must-have filters are applied by code, never by you.
   Recommend only stays returned by search_stays; do not filter, estimate,
   convert or compare prices yourself.
-- Aspects you can search: wifi, workspace, quiet, gym_nearby (a gym near the
-  stay), transport. For other needs (pets, group size, parking, ...) say you
-  cannot verify them from guest reviews; get_stay_details lists what the host
-  claims (amenities), which you may report as a host claim.
+- Aspects search_stays ranks by: wifi, workspace, quiet, gym_nearby (a gym
+  near the stay), transport.
+- For any other question about the stays (host, kids, kitchen, stairs, pets,
+  neighbourhood at night...), call search_reviews with the question and up to
+  5 listing_ids from search_stays. It returns what guests said; report it as
+  guest experience, never as a guarantee. If it finds no quotes, say no guest
+  mentioned it.
 - For follow-up questions about a stay already found, call get_stay_details
-  with its listing_id.
+  (host claims, price, evidence for the aspects) or search_reviews (anything
+  guests may have said) with its listing_id.
 
 How to answer:
 - Keep three things apart: what the listing claims, what guests reported
@@ -90,6 +94,26 @@ tools_schema = [
                             "description": "Aspects to show evidence for."},
             },
             "required": ["listing_id", "aspects"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "search_reviews",
+        "description": (
+            "What guests said about any question at given stays (host, kids, kitchen, "
+            "stairs, noise at night...). Use listing_ids returned by search_stays."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string",
+                             "description": "The user's question or need, as a short sentence."},
+                "listing_ids": {"type": "array", "items": {"type": "string"},
+                                "description": "Up to 5 listing_ids from search_stays."},
+            },
+            "required": ["question", "listing_ids"],
             "additionalProperties": False,
         },
         "strict": True,

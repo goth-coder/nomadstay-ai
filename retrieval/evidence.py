@@ -13,6 +13,7 @@ lexicon first, embeddings for what the lexicon misses.
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 from openai import OpenAI
 
@@ -28,6 +29,7 @@ from retrieval.chunk_index import (
     ChunkIndex,
     search,
 )
+from retrieval.lexical import BM25, reciprocalRankFusion
 
 EVIDENCE_FILE = "evidence.parquet"
 # What the API serves: the index set plus the evidence table; manifest last,
@@ -117,3 +119,36 @@ def judgeParaphrases(client: OpenAI, candidates: list[dict]) -> tuple[list[Evide
                     stance=label["stance"], ref=c["review_id"], text=label["quote"], date=c["date"],
                 ))
     return evidence, usage
+
+
+QUESTION_CHUNKS_PER_LISTING = 4
+
+
+def questionCandidates(index: ChunkIndex, listing_ids: list[str], question: str,
+                       per_listing: int = QUESTION_CHUNKS_PER_LISTING) -> list[dict]:
+    """
+    Review chunks of each listing that best match a free-text question.
+    Hybrid ranking inside each listing: embeddings (meaning, any language)
+    fused with BM25 (exact words: names, rare terms) by reciprocal rank fusion.
+    Returns {chunk_id, listing_id, review_id, date, text}, best first per listing.
+    """
+    allowed = [i for i in listing_ids if i in index.positions_by_listing]
+    if not allowed:
+        return []
+    total = sum(len(index.positions_by_listing[i]) for i in allowed)
+    hits = [h for h in search(index, question, k=total, allowed_listing_ids=set(allowed))
+            if h["source"] == "review"]
+
+    picked = []
+    for listing_id in allowed:
+        own = [h for h in hits if h["listing_id"] == listing_id]
+        if not own:
+            continue
+        texts = [h["text"] for h in own]
+        lexical = BM25().fit(texts).score(question, BM25().fit(texts).transform(texts)) \
+            if len(texts) > 1 else np.zeros(len(texts))
+        semantic = np.array([h["score"] for h in own])
+        order = np.argsort(-reciprocalRankFusion(lexical, semantic), kind="stable")
+        picked += [{k: own[i][k] for k in ("chunk_id", "listing_id", "review_id", "date", "text")}
+                   for i in order[:per_listing]]
+    return picked

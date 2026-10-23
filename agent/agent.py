@@ -5,6 +5,7 @@ O que o agente é capaz fazer:
   Evidence from reviews	  With reliable Wi-Fi for video calls and quiet at night.
   Map evidence	          With a gym nearby.
   Multi-turn memory	      Tell me more about the second one.
+  Open questions	          Is the host responsive? Is it good with kids? (search_reviews)
   Grounding	              Is it available next week? (no: availability is unknown)
 """
 
@@ -16,7 +17,7 @@ from collections import deque
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from agent.nomad import NomadStore, get_stay_details, search_stays
+from agent.nomad import NomadStore, get_stay_details, search_reviews, search_stays
 from agent.settings import SYSTEM_PROMPT, tools_schema
 
 load_dotenv()
@@ -31,6 +32,9 @@ def dispatcher(tool_name, args, store: NomadStore, client):
 
     elif tool_name == "get_stay_details":
         return get_stay_details(**args, store=store)
+
+    elif tool_name == "search_reviews":
+        return search_reviews(**args, store=store, client=client)
 
     raise ValueError(f"Unknown tool: {tool_name}")
 

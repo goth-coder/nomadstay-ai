@@ -67,17 +67,9 @@ def healthcheck(http: Request) -> dict:
 
 
 def toolOutputs(items: list) -> list[dict]:
-    """Search results of this turn, in the shape unverifiedQuotes reads."""
-    outputs = []
-    for item in items:
-        if item.get("type") != "function_call_output":
-            continue
-        output = json.loads(item["output"])
-        if "results" in output:  # search_stays
-            outputs.append(output)
-        elif "aspects" in output:  # get_stay_details: one stay
-            outputs.append({"results": [output]})
-    return outputs
+    """Tool outputs of this turn: what the answer may quote from."""
+    return [json.loads(item["output"]) for item in items
+            if item.get("type") == "function_call_output"]
 
 
 @app.post("/agent/run", dependencies=[Depends(requireApiKey)])
