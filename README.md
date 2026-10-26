@@ -120,7 +120,7 @@ uv pip install --python .venv/Scripts/python.exe -r requirements-dev.txt
 
 # .env: OPENAI_API_KEY, API_KEY (clients send it as X-API-Key),
 #       BUCKET and AWS_REGION (only to download the serving set), LOG_LEVEL
-.venv/Scripts/python.exe -m uvicorn api.app:app --reload
+uv run python -m uvicorn api.app:app --reload
 ```
 
 ```bash
@@ -133,17 +133,17 @@ curl -s localhost:8000/agent/run -H "X-API-Key: $API_KEY" -H "Content-Type: appl
 Offline pipeline (once per snapshot):
 
 ```bash
-python -m ingest.insideairbnb --city porto      # download, clean, sample reviews
-python -m ingest.osm --city porto               # nearest gym per listing
-python -m ingest.build --city porto --model multilingual-minilm --version 2
-python -m ingest.stance submit --city porto     # Batch API; then: collect
-python -m ingest.package --city porto --from-version 2 --version 3 [--upload]
+uv run python -m ingest.insideairbnb --city porto      # download, clean, sample reviews
+uv run python -m ingest.osm --city porto               # nearest gym per listing
+uv run python -m ingest.build --city porto --model multilingual-minilm --version 2
+uv run python -m ingest.stance submit --city porto     # Batch API; then: collect
+uv run python -m ingest.package --city porto --from-version 2 --version 3 [--upload]
 ```
 
 Tests (no OpenAI or S3 calls; a synthetic mini snapshot in `tests/fixtures/`):
 
 ```bash
-.venv/Scripts/python.exe -m pytest -q
+uv run python -m pytest -q
 ```
 
 ## Deploy
