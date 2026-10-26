@@ -13,6 +13,7 @@ from agent.nomad import loadStore, unverifiedQuotes
 from api.auth import requireApiKey
 from api.sessions import SessionStore, trimToLastTurns
 from constants import EMBEDDING_MODEL
+from observability.context import newRequestId
 from observability.logging_config import setupLogging
 from retrieval.embeddings import embedTexts
 
@@ -53,6 +54,16 @@ async def lifespan(app: FastAPI):
     app.state.client.close()
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def addRequestId(request: Request, call_next):
+    # Every log line of this request carries the id; the client gets it back
+    # in the header to report a problem
+    request_id = newRequestId()
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 class AgentRequest(BaseModel):

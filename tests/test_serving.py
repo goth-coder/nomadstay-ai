@@ -4,6 +4,7 @@ Serving: the packaged set (ingest/package.py), loading it locally or from S3
 """
 
 import json
+import logging
 import shutil
 from types import SimpleNamespace
 
@@ -15,6 +16,7 @@ from test_chunk_index import FakeS3
 import api.app as app_module
 from agent import nomad
 from agent.nomad import loadNomadStore, loadStore
+from observability.context import currentRequestId
 from retrieval.chunk_index import MANIFEST
 from retrieval.evidence import EVIDENCE_FILE, SERVING_FILES
 from storage import s3
@@ -157,3 +159,34 @@ def test_follow_up_uses_stay_details_in_the_same_session(api):
     history = client.get(f"/agent/sessions/{first['session_id']}", headers=headers).json()["history"]
     assert [i["name"] for i in history if i.get("type") == "function_call"] == [
         "search_stays", "get_stay_details"]
+
+
+class RequestIdRecorder(logging.Handler):
+    """Reads the request id when the line is logged, as the JSON formatter does."""
+
+    def __init__(self):
+        super().__init__()
+        self.ids = []
+
+    def emit(self, record):
+        self.ids.append(currentRequestId())
+
+
+def test_logs_inside_the_agent_carry_the_request_id_of_the_response(api):
+    client, queue, store = api
+    recorder = RequestIdRecorder()
+    logger = logging.getLogger("agent.agent")
+    level = logger.level
+    logger.addHandler(recorder)
+    logger.setLevel(logging.INFO)
+    queue += [toolCallResponse("search_stays", SEARCH), textResponse("Ribeira Nomad Loft.")]
+
+    try:
+        response = client.post("/agent/run", headers={"X-API-Key": "test-key"},
+                               json={"message": "Porto under 100 with good wifi"})
+    finally:
+        logger.removeHandler(recorder)
+        logger.setLevel(level)
+
+    assert recorder.ids  # the tool_call line
+    assert set(recorder.ids) == {response.headers["X-Request-ID"]}

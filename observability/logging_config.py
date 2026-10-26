@@ -3,6 +3,8 @@ import logging
 import os
 from datetime import UTC, datetime
 
+from observability.context import currentRequestId
+
 APP_LOGGERS = ("__main__", "api", "agent", "domain", "retrieval", "storage", "ingest", "observability")
 
 
@@ -12,6 +14,7 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),   
             "level": record.levelname,
             "logger": record.name,
+            "request_id": currentRequestId(),
             "message": record.getMessage(),
         }
         event.update(getattr(record, "fields", {}))
