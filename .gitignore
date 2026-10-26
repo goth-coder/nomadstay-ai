@@ -23,3 +23,7 @@ Thumbs.db
 
 # Study notes
 docs/
+
+# Real deploy config (account, bucket, ARNs): local only; *.example.json are committed
+deploy/*.json
+!deploy/*.example.json

@@ -1,0 +1,40 @@
+{
+  "family": "hotel-agent-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "3072",
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/<EXECUTION_ROLE_NAME>",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/<TASK_ROLE_NAME>",
+  "containerDefinitions": [{
+    "name": "api",
+    "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<ECR_REPOSITORY>:<IMAGE_TAG>",
+    "essential": true,
+    "portMappings": [{ "containerPort": 8000, "protocol": "tcp" }],
+    "environment": [
+      { "name": "BUCKET", "value": "<ARTIFACTS_BUCKET>" },
+      { "name": "AWS_REGION", "value": "<AWS_REGION>" },
+      { "name": "LOG_LEVEL", "value": "INFO" }
+    ],
+    "secrets": [
+      { "name": "OPENAI_API_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:<OPENAI_SECRET_NAME>-<SUFFIX>" },
+      { "name": "API_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:<API_KEY_SECRET_NAME>-<SUFFIX>" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/hotel-agent-api",
+        "awslogs-region": "<AWS_REGION>",
+        "awslogs-stream-prefix": "api"
+      }
+    },
+    "healthCheck": {
+      "command": ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""],
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 120
+    }
+  }]
+}
