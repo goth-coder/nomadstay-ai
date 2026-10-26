@@ -14,6 +14,7 @@ from agent.nomad import (
     NomadStore,
     loadNomadStore,
     normalizeQuote,
+    quoteInContext,
     search_stays,
     unverifiedQuotes,
 )
@@ -141,3 +142,70 @@ def test_citation_check_matches_curly_and_straight_apostrophes():
         {"quote": "The wifi didn't work at night"}]}}}]}
 
     assert unverifiedQuotes("A guest said “The wifi didn’t work at night”.", [output]) == []
+
+
+# ---------- T8: quote context, price with its date ----------
+
+
+def test_short_quote_is_shown_with_its_sentence():
+    review = "Lovely flat. Only two things were missing: Wlan und Espressomaschine. Host was kind."
+
+    assert quoteInContext(review, "Wlan und Espressomaschine") == \
+        "Only two things were missing: Wlan und Espressomaschine."
+
+
+def test_quote_that_ends_a_sentence_does_not_take_the_next_one():
+    review = "The wifi was fast. The street was loud."
+
+    assert quoteInContext(review, "The wifi was fast.") == "The wifi was fast."
+
+
+def test_quote_stays_as_is_when_it_cannot_be_placed_or_the_sentence_is_too_long():
+    assert quoteInContext(None, "great wifi") == "great wifi"
+    assert quoteInContext("Something else entirely.", "great wifi") == "great wifi"
+    assert quoteInContext("x" * 400 + " great wifi " + "y" * 400, "great wifi") == "great wifi"
+
+
+def test_shown_quotes_are_verbatim_sentences_of_the_review(store):
+    for r in run(store)["results"]:
+        for aspect in r["aspects"].values():
+            for q in aspect["guest_quotes"]:
+                assert q["quote"] in store.reviewText(q["review_id"])
+
+
+def test_every_price_carries_the_snapshot_date(store):
+    for r in run(store)["results"]:
+        if r["price_per_night"] is not None:
+            assert "2026-09-19" in r["price"] and "EUR" in r["price"]
+
+
+def test_citation_check_does_not_pair_quote_marks_across_lines():
+    answer = 'Wifi: "fast" (2025).\n- Quiet: guests said "very calm street" today.'
+
+    assert unverifiedQuotes(answer, [{"results": []}]) == ["very calm street"]
+
+
+def test_citation_check_accepts_words_cut_with_an_ellipsis():
+    output = {"results": [{"aspects": {"wifi": {"listing_claim": None, "guest_quotes": [
+        {"quote": "great location, comfortable bed, washing machine, parking and fast internet."}]}}}]}
+
+    assert unverifiedQuotes('"great location, comfortable bed... and fast internet."', [output]) == []
+    assert unverifiedQuotes('"great location, comfortable bed … and fast internet"', [output]) == []
+
+
+def test_citation_check_rejects_an_ellipsis_that_reorders_or_joins_quotes():
+    output = {"results": [{"aspects": {"wifi": {"listing_claim": None, "guest_quotes": [
+        {"quote": "The wifi was fast."}, {"quote": "The street was loud at night."}]}}}]}
+
+    assert unverifiedQuotes('"loud at night... The street was"', [output]) != []
+    assert unverifiedQuotes('"The wifi was fast... loud at night"', [output]) != []
+
+
+def test_citation_check_rejects_a_corrected_or_translated_quote():
+    output = {"results": [{"aspects": {"quiet": {"listing_claim": None, "guest_quotes": [
+        {"quote": "My girlfriend and wanted a place that was central but also quiet"},
+        {"quote": "Há uma secretária para usar o computador."}]}}}]}
+
+    answer = ('"My girlfriend and I wanted a place that was central but also quiet" and '
+              '"There is a desk to use the computer."')
+    assert len(unverifiedQuotes(answer, [output])) == 2

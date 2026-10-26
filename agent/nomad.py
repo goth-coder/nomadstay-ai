@@ -52,7 +52,17 @@ ATTRIBUTION = "Listings and reviews: Inside Airbnb (CC BY 4.0). Gyms: © OpenStr
 class NomadStore:
     catalog: Catalog
     evidence: EvidenceStore
-    index: ChunkIndex | None = None  # needed only for the paraphrase pass
+    index: ChunkIndex | None = None  # needed for the paraphrase pass and quote context
+    review_rows: dict | None = None  # review_id -> chunk rows, built with the index
+
+    def reviewText(self, review_id) -> str | None:
+        """The full review, rebuilt from its chunks (split at sentence ends, no overlap)."""
+        if self.index is None or self.review_rows is None:
+            return None
+        rows = self.review_rows.get(review_id)
+        if rows is None:
+            return None
+        return "\n".join(self.index.chunks["text"].iloc[rows])
 
 
 def loadNomadStore(directory, model_key: str, evidence_path=None, with_index: bool = True) -> NomadStore:
@@ -63,7 +73,8 @@ def loadNomadStore(directory, model_key: str, evidence_path=None, with_index: bo
     # snapshot, city and currency come from the data, with or without the index
     first = listings.iloc[0]
     catalog = Catalog(listings, first["city"], first["currency"], str(first["snapshot_date"]))
-    return NomadStore(catalog, EvidenceStore(evidence), index)
+    review_rows = index.chunks.groupby("review_id").indices if index is not None else None
+    return NomadStore(catalog, EvidenceStore(evidence), index, review_rows)
 
 
 def loadStore(city: str = CITY, version: int = ARTIFACT_VERSION,
@@ -98,15 +109,49 @@ def relaxSuggestions(counts: dict, max_price, must_have, max_gym_distance_m) -> 
     return suggestions
 
 
-def aspectSummary(verdict, listing: Listing) -> dict:
+# Ready-made wording, so the answer can't call a host's claim (or speed test) verified
+VERDICT_MEANING = {
+    "verified": "listed by the host and confirmed by guests",
+    "claim_only": "listed by the host only; no guest confirmed it",
+    "evidence_only": "reported by guests or map data; not listed by the host",
+    "mixed": "guests disagree",
+    "contradicted": "guests contradict it",
+    "unknown": "no evidence",
+}
+SENTENCE_ENDS = ".!?\n"
+
+
+def quoteInContext(text: str | None, quote: str, max_chars: int = MAX_QUOTE_CHARS) -> str:
+    """
+    The whole sentence around a verified quote, verbatim from the review, so
+    a short span ("Wlan und Espressomaschine") keeps its meaning. The quote
+    itself when the review is unknown, the quote can't be placed or the
+    sentence is too long.
+    """
+    start = text.find(quote) if text else -1
+    if start < 0:
+        return quote[:max_chars]
+    end = start + len(quote)
+    left = max(text.rfind(c, 0, start) for c in SENTENCE_ENDS) + 1
+    # from the quote's last character: a quote that ends a sentence stops there
+    ends = [i for i in (text.find(c, max(end - 1, start)) for c in SENTENCE_ENDS) if i >= 0]
+    right = min(ends) + 1 if ends else len(text)
+    sentence = text[left:right].strip()
+    return sentence if len(sentence) <= max_chars else quote[:max_chars]
+
+
+def aspectSummary(verdict, listing: Listing, store: NomadStore | None = None) -> dict:
     guest = [e for e in verdict.evidence if e.source == "review"]
     quotes = []
     for stance in ("contradicts", "supports"):  # complaints first: they matter most
         picked = [e for e in guest if e.stance == stance and e.text][:QUOTES_PER_STANCE]
-        quotes += [{"stance": e.stance, "quote": e.text[:MAX_QUOTE_CHARS], "review_id": e.ref,
+        quotes += [{"stance": e.stance,
+                    "quote": quoteInContext(store.reviewText(e.ref) if store else None, e.text),
+                    "review_id": e.ref,
                     "date": e.date.isoformat() if e.date else None} for e in picked]
     summary = {
         "verdict": verdict.verdict,
+        "meaning": VERDICT_MEANING[verdict.verdict],
         "listing_claim": verdict.claim,
         "guest_reports": {"supports": sum(e.stance == "supports" for e in guest),
                           "contradicts": sum(e.stance == "contradicts" for e in guest)},
@@ -116,21 +161,32 @@ def aspectSummary(verdict, listing: Listing) -> dict:
     }
     if verdict.aspect == "wifi" and listing.wifi_mbps:
         summary["listed_speed_test_mbps"] = listing.wifi_mbps
+        summary["speed_note"] = (f"{listing.wifi_mbps:g} Mbps is the host's own speed test; "
+                                 "guests did not measure it.")
     return summary
 
 
-def formatResult(ranked: RankedListing, listing: Listing) -> dict:
+def priceLabel(price, currency: str, snapshot_date: str) -> str | None:
+    """The price as the answer must state it: indicative, with the snapshot date."""
+    if price is None or pd.isna(price):
+        return None
+    return f"{price:.2f} {currency}/night, indicative on {snapshot_date} (not a live quote)"
+
+
+def formatResult(ranked: RankedListing, listing: Listing, store: NomadStore | None = None) -> dict:
+    catalog = store.catalog if store else None
     return {
         "listing_id": listing.listing_id,
         "name": listing.name,
         "url": listing.url,
         "neighbourhood": listing.neighbourhood,
         "price_per_night": listing.price,
+        "price": priceLabel(listing.price, catalog.currency, catalog.snapshot_date) if catalog else None,
         "price_source": listing.price_status,
         "rating": listing.rating,
         "number_of_reviews": listing.number_of_reviews,
         "score": ranked.score,
-        "aspects": {a: aspectSummary(v, listing) for a, v in ranked.aspects.items()},
+        "aspects": {a: aspectSummary(v, listing, store) for a, v in ranked.aspects.items()},
     }
 
 
@@ -211,7 +267,7 @@ def search_stays(
         shortlist = withParaphrases(store, client, shortlist, listings, aspects, evidence, today, config)
 
     return {**base, "status": "ok", "aspects": aspects,
-            "results": [formatResult(r, listings[r.listing_id]) for r in shortlist[:limit]]}
+            "results": [formatResult(r, listings[r.listing_id], store) for r in shortlist[:limit]]}
 
 
 def get_stay_details(listing_id: str, aspects: list[str], store: NomadStore) -> dict:
@@ -230,7 +286,7 @@ def get_stay_details(listing_id: str, aspects: list[str], store: NomadStore) -> 
     ranked = rankListings([listing], aspects, evidence, today)[0]
     return {
         "status": "ok",
-        **formatResult(ranked, listing),
+        **formatResult(ranked, listing, store),
         "property_type": listing.property_type,
         "room_type": listing.room_type,
         "accommodates": listing.accommodates,
@@ -290,7 +346,8 @@ def search_reviews(question: str, listing_ids: list[str], store: NomadStore,
     }
 
 
-QUOTED = re.compile(r"[\"“”«»„]([^\"“”«»„]{8,})[\"“”«»„]")
+# No line breaks inside, so a stray quote mark can't pair with one paragraphs away
+QUOTED = re.compile(r"[\"“”«»„]([^\"“”«»„\n]{8,400})[\"“”«»„]")
 TYPOGRAPHY = str.maketrans({"’": "'", "‘": "'", "`": "'", "–": "-", "—": "-", "…": "..."})
 
 
@@ -300,13 +357,13 @@ def normalizeQuote(text: str) -> str:
 
 def quotableTexts(value) -> list[str]:
     """Every text a tool output lets the model quote: guest quotes, listing
-    claims and host amenities, wherever they sit in the output."""
+    claims, host amenities and listing names, wherever they sit in the output."""
     texts = []
     if isinstance(value, dict):
         for key, item in value.items():
             if key == "guest_quotes":
                 texts += [q["quote"] for q in item]
-            elif key == "listing_claim" and item:
+            elif key in ("listing_claim", "name") and item:
                 texts.append(item)
             elif key == "host_amenities":
                 texts += list(item)
@@ -318,6 +375,24 @@ def quotableTexts(value) -> list[str]:
     return texts
 
 
+def quotedFrom(quote: str, source: str) -> bool:
+    """
+    The quote is verbatim in the source. An elision ("..." between parts) is
+    allowed: every part verbatim, in order, from this one source, so words
+    can be cut but never changed, translated or taken from another quote.
+    """
+    position = 0
+    for part in normalizeQuote(quote).split("..."):
+        part = part.strip(" .,;:!?")
+        if not part:
+            continue
+        found = source.find(part, position)
+        if found < 0:
+            return False
+        position = found + len(part)
+    return True
+
+
 def unverifiedQuotes(answer: str, tool_outputs: list[dict]) -> list[str]:
     """
     Quoted passages (8+ chars, straight or typographic double quotes) in the
@@ -327,4 +402,4 @@ def unverifiedQuotes(answer: str, tool_outputs: list[dict]) -> list[str]:
     """
     known = [normalizeQuote(t) for t in quotableTexts(tool_outputs)]
     return [m for m in QUOTED.findall(answer)
-            if not any(normalizeQuote(m) in k for k in known)]
+            if not any(quotedFrom(m, k) for k in known)]

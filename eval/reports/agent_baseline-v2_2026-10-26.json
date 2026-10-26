@@ -1,0 +1,981 @@
+{
+  "label": "baseline-v2",
+  "date": "2026-10-26",
+  "commit": "b2f7ead",
+  "model": "gpt-4o-mini",
+  "snapshot": "2026-09-19",
+  "summary": {
+    "scenarios": 25,
+    "errors": 0,
+    "search_called": 1.0,
+    "status_accuracy": 0.96,
+    "intent_city": 1.0,
+    "intent_max_price": 1.0,
+    "intent_needs_recall": 0.98,
+    "intent_must_have_exact": 0.12,
+    "searches_with_added_needs": 10,
+    "answers_with_unverified_quotes": 5,
+    "answers_with_price_without_date": 15,
+    "answers_with_verified_misused": 0,
+    "attribution": 1.0,
+    "cost_usd": 0.0246,
+    "llm_calls": 68
+  },
+  "checks": [
+    {
+      "id": "wifi_gym_100",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "wifi",
+          "gym_nearby"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [
+        " Guest reports mention mixed experiences: one guest noted ",
+        " (August 4, 2017), while another praised it as ",
+        " (September 9, 2023). (Stale evidence)\n   - **Gym Nearby:** Fitness Hut, approximately 346 m away (map data).\n\n2. **[Remote Work–Ready • Private Bathroom • AC](https://www.airbnb.com/rooms/43522785)**\n   - **Price per Night:** €64.00\n   - **Rating:** 4.87 (112 reviews)\n   - **Wi-Fi:** Fast Wi-Fi at 350 Mbps, with guest support stating ",
+        " (September 20, 2025).\n   - **Gym Nearby:** VivaFit, approximately 468 m away (map data).\n\n3. **[Downtown Terrace Apartment](https://www.airbnb.com/rooms/6451156)**\n   - **Price per Night:** €78.18\n   - **Rating:** 4.86 (638 reviews)\n   - **Wi-Fi:** Fast Wi-Fi at 204 Mbps. Guests reported mixed experiences: one noted ",
+        " (September 19, 2018), while another confirmed "
+      ],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001056,
+      "error": null
+    },
+    {
+      "id": "calls_quiet_90",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 90,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "quiet"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001164,
+      "error": null
+    },
+    {
+      "id": "desk_must_80",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": true,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "quiet",
+          "transport",
+          "wifi"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 80,
+        "currency": "EUR",
+        "must_have": [
+          "workspace"
+        ],
+        "preferences": [
+          "wifi",
+          "quiet",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [
+        " (May 5, 2025)\n   - **WiFi:** Verified at 420 Mbps \n     - Guest Quote: "
+      ],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 4,
+      "cost_usd": 0.001829,
+      "error": null
+    },
+    {
+      "id": "pt_internet_70",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 0.5,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 70,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "wifi"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000728,
+      "error": null
+    },
+    {
+      "id": "fr_calm_gym_120",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 120,
+        "currency": "EUR",
+        "must_have": [
+          "gym_nearby"
+        ],
+        "preferences": [
+          "quiet"
+        ],
+        "max_gym_distance_m": 1000
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 4,
+      "cost_usd": 0.001424,
+      "error": null
+    },
+    {
+      "id": "es_oporto_metro_100",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "workspace"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Oporto",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "wifi",
+          "workspace"
+        ],
+        "preferences": [
+          "wifi",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [
+        "gran internet",
+        "puedes tomar el metro rápidamente al centro de la ciudad",
+        "tienes la opción de trabajar en tu propia habitación o en el espacio de coworking con escritorio ajustable",
+        "el WiFi también funcionó bien",
+        "la estación de tren está a unos 10 minutos a pie",
+        "el wifi es rápido",
+        "una estación de metro y paradas de autobuses están muy cerca",
+        "escritorio"
+      ],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001336,
+      "error": null
+    },
+    {
+      "id": "metro_150",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "wifi",
+          "workspace"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 150,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "wifi",
+          "workspace",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [
+        "The space is great for working.",
+        "You can rest or work for a while."
+      ],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001275,
+      "error": null
+    },
+    {
+      "id": "gym_must_60",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": true,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 60,
+        "currency": "EUR",
+        "must_have": [
+          "gym_nearby"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000717,
+      "error": null
+    },
+    {
+      "id": "impossible_budget_10",
+      "expect": "no_results",
+      "status": "no_results",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "quiet",
+          "transport",
+          "workspace"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 10,
+        "currency": "EUR",
+        "must_have": [
+          "wifi",
+          "gym_nearby"
+        ],
+        "preferences": [
+          "wifi",
+          "workspace",
+          "quiet",
+          "gym_nearby",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": null,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000411,
+      "error": null
+    },
+    {
+      "id": "lisbon",
+      "expect": "unsupported_city",
+      "status": "unsupported_city",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Lisbon",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "wifi"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": null,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000348,
+      "error": null
+    },
+    {
+      "id": "gaia_boundary",
+      "expect": "unsupported_city",
+      "status": "unsupported_city",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Vila Nova de Gaia",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "workspace"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": null,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000356,
+      "error": null
+    },
+    {
+      "id": "usd_budget",
+      "expect": "unsupported_currency",
+      "status": "unsupported_currency",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "currency": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 100,
+        "currency": "USD",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": null,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000348,
+      "error": null
+    },
+    {
+      "id": "no_budget_remote_work",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "transport"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": null,
+        "currency": null,
+        "must_have": [
+          "wifi",
+          "workspace"
+        ],
+        "preferences": [
+          "wifi",
+          "workspace",
+          "quiet",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 4,
+      "cost_usd": 0.001718,
+      "error": null
+    },
+    {
+      "id": "mbps_100",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 130,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000714,
+      "error": null
+    },
+    {
+      "id": "light_sleeper_110",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "wifi",
+          "workspace"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 110,
+        "currency": "EUR",
+        "must_have": [
+          "wifi",
+          "workspace"
+        ],
+        "preferences": [
+          "quiet"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001305,
+      "error": null
+    },
+    {
+      "id": "two_weeks_nomad_120",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "quiet",
+          "transport"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 120,
+        "currency": "EUR",
+        "must_have": [
+          "workspace",
+          "wifi",
+          "gym_nearby"
+        ],
+        "preferences": [
+          "wifi",
+          "workspace",
+          "quiet",
+          "gym_nearby",
+          "transport"
+        ],
+        "max_gym_distance_m": 1000
+      },
+      "unverified_quotes": [
+        "fast and reliable internet"
+      ],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 5,
+      "cost_usd": 0.002061,
+      "error": null
+    },
+    {
+      "id": "availability_dates",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000714,
+      "error": null
+    },
+    {
+      "id": "current_price",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": null,
+        "currency": null,
+        "must_have": [
+          "gym_nearby"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": 300
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.000905,
+      "error": null
+    },
+    {
+      "id": "uppercase_city",
+      "expect": "results",
+      "status": "unsupported_currency",
+      "status_ok": false,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "wifi"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 100,
+        "currency": "USD",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "quiet"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": null,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000347,
+      "error": null
+    },
+    {
+      "id": "cheap_no_needs_50",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": true,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 50,
+        "currency": "EUR",
+        "must_have": [],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000621,
+      "error": null
+    },
+    {
+      "id": "zoom_wifi_80",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 80,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "wifi"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": false,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000718,
+      "error": null
+    },
+    {
+      "id": "group_of_4",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 100,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "wifi"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.00071,
+      "error": null
+    },
+    {
+      "id": "pets",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 90,
+        "currency": "EUR",
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 2,
+      "cost_usd": 0.000715,
+      "error": null
+    },
+    {
+      "id": "workspace_quiet_75",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "wifi"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": 75,
+        "currency": "EUR",
+        "must_have": [
+          "workspace",
+          "wifi"
+        ],
+        "preferences": [
+          "quiet"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 3,
+      "cost_usd": 0.001385,
+      "error": null
+    },
+    {
+      "id": "gym_quiet_wifi_no_budget",
+      "expect": "results",
+      "status": "ok",
+      "status_ok": true,
+      "intent": {
+        "called": true,
+        "city": true,
+        "must_have_exact": false,
+        "needs_recall": 1.0,
+        "needs_added": [
+          "transport"
+        ],
+        "max_price": true
+      },
+      "search_args": {
+        "city": "Porto",
+        "max_price": null,
+        "currency": null,
+        "must_have": [
+          "wifi"
+        ],
+        "preferences": [
+          "quiet",
+          "gym_nearby",
+          "transport"
+        ],
+        "max_gym_distance_m": null
+      },
+      "unverified_quotes": [],
+      "price_without_date": true,
+      "verified_misused": false,
+      "attribution": true,
+      "tools": [
+        "search_stays"
+      ],
+      "llm_calls": 4,
+      "cost_usd": 0.001673,
+      "error": null
+    }
+  ]
+}

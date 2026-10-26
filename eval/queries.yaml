@@ -64,11 +64,12 @@ scenarios:
     notes: "Few listings claim a gym; an honest 'only N options' or no_results is fine."
     must_not: [a listing without a gym amenity]
 
-  - id: impossible_budget_20
-    request: "Porto, under €20 a night, fast wifi and a gym."
-    intent: {city: porto, max_price: 20, must_have: [], preferences: [wifi, gym_nearby]}
+  - id: impossible_budget_10
+    # €10: the cheapest Porto stay in the 2026-09-19 snapshot is €11.90 (dorm beds start under €20)
+    request: "Porto, under €10 a night, fast wifi and a gym."
+    intent: {city: porto, max_price: 10, must_have: [], preferences: [wifi, gym_nearby]}
     expect: no_results
-    must_not: [any listing above €20]
+    must_not: [any listing above €10]
 
   - id: lisbon
     request: "Find me a place in Lisbon under €100 with good wifi."
