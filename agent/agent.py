@@ -19,6 +19,7 @@ from openai import OpenAI
 
 from agent.nomad import NomadStore, get_stay_details, search_reviews, search_stays
 from agent.settings import SYSTEM_PROMPT, tools_schema
+from observability.llm import tracedCall
 
 load_dotenv()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -51,7 +52,8 @@ def runAgent(
         # Agent decides what to do
         # Answer without tool call
         # Answer with Call tool(s)
-        response = client.responses.create(
+        response = tracedCall(
+            client, "agent",
             model="gpt-4o-mini",
             instructions=SYSTEM_PROMPT,
             input=list(context),
@@ -94,8 +96,8 @@ def runAgent(
 
     # Steps exhausted without a final answer: force one with what was gathered
     logger.warning("Agent reached max steps (%s), forcing final answer", steps_number)
-    response = client.responses.create(
-        model="gpt-4o-mini", instructions=SYSTEM_PROMPT, max_output_tokens=max_output_tokens,
+    response = tracedCall(
+        client, "agent_final", model="gpt-4o-mini", instructions=SYSTEM_PROMPT, max_output_tokens=max_output_tokens,
         input=list(context), tools=tools_schema, tool_choice="none",
     )
     context.append({"role": "assistant", "content": response.output_text})

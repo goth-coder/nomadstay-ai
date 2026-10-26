@@ -190,3 +190,16 @@ def test_logs_inside_the_agent_carry_the_request_id_of_the_response(api):
 
     assert recorder.ids  # the tool_call line
     assert set(recorder.ids) == {response.headers["X-Request-ID"]}
+
+
+def test_every_model_call_of_a_run_is_logged(api, caplog):
+    client, queue, _ = api
+    caplog.set_level(logging.INFO, logger="observability.llm")
+    queue += [toolCallResponse("search_stays", SEARCH), textResponse("Ribeira Nomad Loft.")]
+
+    client.post("/agent/run", headers={"X-API-Key": "test-key"},
+                json={"message": "Porto under 100 with good wifi"})
+
+    events = [r.fields for r in caplog.records if r.getMessage() == "llm_call"]
+    assert [e["purpose"] for e in events] == ["agent", "agent"]  # tool call, then the answer
+    assert all(e["status"] == "ok" for e in events)

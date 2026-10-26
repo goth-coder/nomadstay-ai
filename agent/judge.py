@@ -16,6 +16,7 @@ import yaml
 from openai import OpenAI
 
 from domain.aspects import ASPECTS
+from observability.llm import tracedCall
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ def judgeReviews(client: OpenAI, reviews: list[dict], model: str = JUDGE_MODEL) 
 
     pending = reviews
     for _attempt in range(2):
-        response = client.responses.create(**requestParams(pending, model))
+        response = tracedCall(client, "judge_stance", **requestParams(pending, model))
         usage["calls"] += 1
         if getattr(response, "usage", None):
             usage["input_tokens"] += response.usage.input_tokens
@@ -238,8 +239,8 @@ def judgeQuestion(client: OpenAI, question: str, excerpts: list[dict],
     by_id = {e["id"]: e for e in excerpts}
     pending = excerpts
     for _attempt in range(2):
-        response = client.responses.create(
-            model=model, instructions=QUESTION_PROMPT, input=questionInput(question, pending),
+        response = tracedCall(
+            client, "judge_question", model=model, instructions=QUESTION_PROMPT, input=questionInput(question, pending),
             temperature=0, text={"format": questionSchema()},
         )
         usage["calls"] += 1
