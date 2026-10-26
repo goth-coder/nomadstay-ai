@@ -104,7 +104,7 @@ def runAgent(
 
 if __name__ == "__main__":
     from agent.nomad import loadStore
-    from logging_config import setupLogging
+    from observability.logging_config import setupLogging
 
     setupLogging()
     store = loadStore()  # serving set: local copy or S3

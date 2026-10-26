@@ -10,7 +10,13 @@ from types import SimpleNamespace
 import pytest
 from conftest import MODEL, fakeClient
 
-from agent.nomad import NomadStore, loadNomadStore, search_stays, unverifiedQuotes
+from agent.nomad import (
+    NomadStore,
+    loadNomadStore,
+    normalizeQuote,
+    search_stays,
+    unverifiedQuotes,
+)
 from retrieval.evidence import EvidenceStore, judgeParaphrases
 
 
@@ -48,6 +54,18 @@ def test_paraphrase_label_with_an_invalid_quote_is_dropped():
     evidence, _ = judgeParaphrases(fakeClient(response), chunks)
 
     assert evidence == []
+
+
+def test_normalize_quote_ignores_punctuation_at_the_ends():
+    assert normalizeQuote("safe and quiet neighborhood,") == normalizeQuote("Safe and quiet neighborhood")
+
+
+def test_citation_check_ignores_punctuation_inside_the_quotes():
+    output = {"results": [{"aspects": {"quiet": {"listing_claim": None, "guest_quotes": [
+        {"quote": "Safe and quiet neighborhood"}]}}}]}
+    answer = 'Guests liked the "safe and quiet neighborhood," while one found it noisy.'
+
+    assert unverifiedQuotes(answer, [output]) == []
 
 
 # ---------- the paraphrase pass never breaks the search ----------

@@ -12,7 +12,9 @@ from agent.agent import runAgent
 from agent.nomad import loadStore, unverifiedQuotes
 from api.auth import requireApiKey
 from api.sessions import SessionStore, trimToLastTurns
-from logging_config import setupLogging
+from constants import EMBEDDING_MODEL
+from observability.logging_config import setupLogging
+from retrieval.embeddings import embedTexts
 
 load_dotenv()
 setupLogging()
@@ -34,9 +36,13 @@ async def lifespan(app: FastAPI):
 
     app.state.store = loadStore()  # serving set: local copy, or downloaded from S3
     catalog = app.state.store.catalog
+    
+    embedTexts(["warmup"], EMBEDDING_MODEL, kind="query")
+
     logger.info("Startup complete: %s listings in %s (snapshot %s), %s vectors",
                 len(catalog.listings), catalog.city, catalog.snapshot_date,
                 vectorCount(app.state.store))
+    
     app.state.client = OpenAI(api_key=OPENAI_API_KEY)
     app.state.sessions = SessionStore(
         ttl_seconds=int(os.environ.get("SESSION_TTL_SECONDS", "1800")),

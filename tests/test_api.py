@@ -5,7 +5,7 @@ routes, and project loggers still get LOG_LEVEL after the move to packages.
 
 import logging
 
-from logging_config import setupLogging
+from observability.logging_config import setupLogging
 
 
 def test_api_imports_and_keeps_its_routes():

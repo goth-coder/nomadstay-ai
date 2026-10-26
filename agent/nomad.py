@@ -295,7 +295,7 @@ TYPOGRAPHY = str.maketrans({"’": "'", "‘": "'", "`": "'", "–": "-", "—":
 
 
 def normalizeQuote(text: str) -> str:
-    return " ".join(text.translate(TYPOGRAPHY).lower().split()).strip(" .")
+    return " ".join(text.translate(TYPOGRAPHY).lower().split()).strip(" .,;:!?")
 
 
 def quotableTexts(value) -> list[str]:

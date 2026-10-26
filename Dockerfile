@@ -15,7 +15,7 @@ ENV HF_HOME=/home/app/.cache/huggingface
 USER app
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
 ENV HF_HUB_OFFLINE=1
-
+ENV TQDM_DISABLE=1
 # Source stays root-owned (read-only for the app); only data/ is writable
 USER root
 COPY . .
