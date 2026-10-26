@@ -249,6 +249,7 @@ class FakeS3:
 def fakeS3(monkeypatch):
     fake = FakeS3()
     monkeypatch.setattr(s3, "session", SimpleNamespace(client=lambda name: fake))
+    monkeypatch.setattr(s3, "BUCKET", "test-bucket")
     return fake
 
 
@@ -272,3 +273,10 @@ def test_download_artifacts_missing_version_raises_404(fakeS3, tmp_path):
     with pytest.raises(ClientError) as error:
         s3.downloadArtifacts(9, "porto", tmp_path, ["chunks.index"])
     assert error.value.response["Error"]["Code"] == "404"
+
+
+def test_s3_functions_require_the_bucket_from_the_environment(monkeypatch, tmp_path):
+    monkeypatch.setattr(s3, "BUCKET", None)
+
+    with pytest.raises(RuntimeError, match="BUCKET is not set"):
+        s3.downloadArtifacts(3, "porto", tmp_path, ["manifest.json"])

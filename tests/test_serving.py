@@ -54,6 +54,7 @@ def test_loader_refuses_a_tampered_evidence_file(serving, tmp_path):
 def fakeS3(monkeypatch):
     fake = FakeS3()
     monkeypatch.setattr(s3, "session", SimpleNamespace(client=lambda name: fake))
+    monkeypatch.setattr(s3, "BUCKET", "test-bucket")
     return fake
 
 
