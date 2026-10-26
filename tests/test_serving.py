@@ -203,3 +203,64 @@ def test_every_model_call_of_a_run_is_logged(api, caplog):
     events = [r.fields for r in caplog.records if r.getMessage() == "llm_call"]
     assert [e["purpose"] for e in events] == ["agent", "agent"]  # tool call, then the answer
     assert all(e["status"] == "ok" for e in events)
+
+
+# ---------- one "request" line per request (RED) ----------
+
+
+@pytest.fixture
+def requestLines(caplog):
+    caplog.set_level(logging.DEBUG, logger="observability.access_log")
+    return lambda: [(r.levelno, r.fields) for r in caplog.records if r.getMessage() == "request"]
+
+
+def test_run_logs_one_request_line_with_its_model_usage(api, requestLines):
+    client, queue, _ = api
+    queue += [toolCallResponse("search_stays", SEARCH), textResponse("Ribeira Nomad Loft.")]
+
+    client.post("/agent/run", headers={"X-API-Key": "test-key"},
+                json={"message": "Porto under 100 with good wifi"})
+
+    [(level, line)] = requestLines()
+    assert level == logging.INFO
+    assert (line["method"], line["route"], line["status"]) == ("POST", "/agent/run", 200)
+    assert line["llm_calls"] == 2 and line["duration_ms"] >= line["llm_ms"] >= 0
+
+
+def test_rejected_request_is_logged_with_its_status(api, requestLines):
+    client, _, _ = api
+
+    client.post("/agent/run", json={"message": "hi"})
+
+    assert requestLines()[0][1]["status"] == 401
+
+
+def test_route_is_the_template_not_the_real_path(api, requestLines):
+    client, _, _ = api
+
+    client.get("/agent/sessions/abc123", headers={"X-API-Key": "test-key"})
+    client.get("/wp-login.php")
+
+    routes = [line["route"] for _, line in requestLines()]
+    assert routes == ["/agent/sessions/{session_id}", "unmatched"]
+
+
+def test_health_checks_are_logged_at_debug(api, requestLines):
+    client, _, _ = api
+
+    client.get("/health")
+
+    assert requestLines()[0][0] == logging.DEBUG
+
+
+def test_unhandled_error_is_logged_as_500(api, requestLines, monkeypatch):
+    client, _, _ = api
+
+    def explode(session_id):
+        raise RuntimeError("store down")
+
+    monkeypatch.setattr(client.app.state.sessions, "get", explode)
+    with pytest.raises(RuntimeError):
+        client.get("/agent/sessions/abc123", headers={"X-API-Key": "test-key"})
+
+    assert requestLines()[0][1]["status"] == 500

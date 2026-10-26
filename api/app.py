@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ from agent.nomad import loadStore, unverifiedQuotes
 from api.auth import requireApiKey
 from api.sessions import SessionStore, trimToLastTurns
 from constants import EMBEDDING_MODEL
+from observability.access_log import logRequest, routeTemplate
 from observability.context import newRequestId, startRequestStats
 from observability.logging_config import setupLogging
 from retrieval.embeddings import embedTexts
@@ -57,14 +59,21 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.middleware("http")
-async def addRequestId(request: Request, call_next):
+async def observeRequest(request: Request, call_next):
     # Every log line of this request carries the id; the client gets it back
     # in the header to report a problem
     request_id = newRequestId()
-    startRequestStats()  # every model call of this request adds to it (observability/llm.py)
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request_id
-    return response
+    stats = startRequestStats()  # every model call of this request adds to it (observability/llm.py)
+    start = time.perf_counter()
+    status = 500  # kept if the route raises: the worst errors must be logged too
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        logRequest(request.method, routeTemplate(request.scope), status,
+                   (time.perf_counter() - start) * 1000, stats)
 
 
 class AgentRequest(BaseModel):
