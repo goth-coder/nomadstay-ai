@@ -331,7 +331,9 @@ def search_reviews(question: str, listing_ids: list[str], store: NomadStore,
             "guest_reports": {"supports": sum(l["stance"] == "supports" for _, l in found),
                               "contradicts": sum(l["stance"] == "contradicts" for _, l in found)},
             "guest_quotes": [
-                {"stance": l["stance"], "quote": l["quote"][:MAX_QUOTE_CHARS], "review_id": e["review_id"],
+                {"stance": l["stance"],
+                 "quote": quoteInContext(store.reviewText(e["review_id"]) or e["text"], l["quote"]),
+                 "review_id": e["review_id"],
                  "date": e["date"].isoformat() if e["date"] else None}
                 for e, l in found[:QUOTES_PER_LISTING]
             ],

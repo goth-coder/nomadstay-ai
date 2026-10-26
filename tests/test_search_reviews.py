@@ -110,6 +110,28 @@ def test_search_reviews_returns_verified_quotes_complaints_first(store, texts):
             assert q["quote"] in texts[q["review_id"]]
 
 
+class ShortQuoteJudge(RuleJudge):
+    """Quotes only the first three words of the sentence, like a terse judge."""
+
+    def create(self, **kwargs):
+        response = super().create(**kwargs)
+        labels = json.loads(response.output_text)["labels"]
+        for label in labels:
+            label["quote"] = " ".join(label["quote"].split()[:3])
+        return SimpleNamespace(output_text=json.dumps({"labels": labels}), output=[])
+
+
+def test_short_judge_quotes_are_shown_with_their_sentence(store, texts):
+    client = SimpleNamespace(responses=ShortQuoteJudge(), close=lambda: None)
+
+    result = search_reviews("wifi?", [RIBEIRA, BOLHAO], store=store, client=client)
+
+    quotes = [q for listing in result["listings"] for q in listing["guest_quotes"]]
+    assert quotes
+    for q in quotes:
+        assert len(q["quote"].split()) > 3 and q["quote"] in texts[q["review_id"]]
+
+
 def test_unverified_judge_quotes_are_not_reported(store):
     result = search_reviews("wifi?", [RIBEIRA], store=store, client=judge("words nobody wrote"))
 
