@@ -51,6 +51,12 @@ def toolCallResponse(name: str, args: dict, call_id: str = "call_1") -> SimpleNa
     return SimpleNamespace(output_text="", output=[item])
 
 
+@pytest.fixture(autouse=True)
+def realClientUnlessAsked(monkeypatch):
+    # A local .env may turn the load-test mock on; tests opt in explicitly (test_mock_llm.py)
+    monkeypatch.delenv("MOCK_LLM", raising=False)
+
+
 # ---------- artifact set built from the mini_porto fixture ----------
 
 FIXTURES = Path(__file__).parent / "fixtures"

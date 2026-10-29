@@ -10,7 +10,8 @@ Guest evidence for the search, from two sources:
 Together this is the hybrid retrieval that won the T5 evaluation:
 lexicon first, embeddings for what the lexicon misses.
 """
-
+import contextvars
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import numpy as np
@@ -40,6 +41,7 @@ PARAPHRASES_PER_ASPECT = 8
 MAX_PARAPHRASES = 24  # per search, across aspects: at most 3 judge batches
 MIN_PARAPHRASE_SCORE = 0.5  # cosine, multilingual-minilm; calibrated in T8
 JUDGE_BATCH = 10
+JUDGE_WORKERS = 3  # MAX_PARAPHRASES / JUDGE_BATCH: every batch at once
 
 
 @dataclass
@@ -48,6 +50,10 @@ class EvidenceStore:
 
     def __post_init__(self):
         self.rows_by_listing = self.table.groupby("listing_id").indices
+        # The rows precomputed() turns into evidence, as columns for domain.ranking.prescore
+        judged = self.table[self.table["stance"].isin(["supports", "contradicts"])
+                            & self.table["quote"].notna() & (self.table["quote"] != "")]
+        self.scorable = judged[["listing_id", "aspect", "stance"]].assign(date=pd.to_datetime(judged["date"]))
 
     def rows(self, listing_ids) -> pd.DataFrame:
         positions = [p for i in listing_ids for p in self.rows_by_listing.get(i, [])]
@@ -102,13 +108,24 @@ def paraphraseCandidates(index: ChunkIndex, evidence: EvidenceStore, listing_ids
     return [{k: v for k, v in c.items() if k != "score"} for c in ranked[:MAX_PARAPHRASES]]
 
 
+def judgeBatch(client: OpenAI, batch: list[dict]) -> tuple[list[dict], dict]:
+    """One judge call for one batch of paraphrase candidates."""
+    local = [{"id": i, "text": c["text"], "aspects": c["aspects"]} for i, c in enumerate(batch)]
+    return judgeReviews(client, local)
+
+
 def judgeParaphrases(client: OpenAI, candidates: list[dict]) -> tuple[list[Evidence], dict]:
-    """Online judge for the paraphrase candidates, in small batches."""
+    """Online judge for the paraphrase candidates: the batches run at the same time."""
+    batches = [candidates[start:start + JUDGE_BATCH] for start in range(0, len(candidates), JUDGE_BATCH)]
+
+    with ThreadPoolExecutor(max_workers=JUDGE_WORKERS) as pool:
+        # each batch in its own copy of the request context: request_id and cost stats follow it
+        futures = [pool.submit(contextvars.copy_context().run, judgeBatch, client, batch)
+                   for batch in batches]
+        results = [future.result() for future in futures]
+
     evidence, usage = [], {"input_tokens": 0, "output_tokens": 0, "calls": 0}
-    for start in range(0, len(candidates), JUDGE_BATCH):
-        batch = candidates[start:start + JUDGE_BATCH]
-        local = [{"id": i, "text": c["text"], "aspects": c["aspects"]} for i, c in enumerate(batch)]
-        labels, used = judgeReviews(client, local)
+    for batch, (labels, used) in zip(batches, results):
         for k in usage:
             usage[k] += used[k]
         for label in labels:

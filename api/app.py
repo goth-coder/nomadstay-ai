@@ -27,6 +27,11 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 MAX_TURNS = int(os.environ.get("MAX_TURNS", "10"))
 
 
+def mockLlm() -> bool:
+    "Used only for loadtests"
+    return os.environ.get("MOCK_LLM") == "1"
+
+
 def vectorCount(store) -> int:
     return store.index.index.ntotal if store.index is not None else 0
 
@@ -45,8 +50,16 @@ async def lifespan(app: FastAPI):
     logger.info("Startup complete: %s listings in %s (snapshot %s), %s vectors",
                 len(catalog.listings), catalog.city, catalog.snapshot_date,
                 vectorCount(app.state.store))
-    
-    app.state.client = OpenAI(api_key=OPENAI_API_KEY)
+
+    if mockLlm():
+        # Load tests only: imported here so production never loads the mock
+        from loadtest.mock_llm import MockOpenAI
+
+        app.state.client = MockOpenAI(float(os.environ.get("MOCK_LLM_MIN_S", "1.0")),
+                                      float(os.environ.get("MOCK_LLM_MAX_S", "2.0")))
+        logger.warning("MOCK_LLM is on: answers are fake, nothing is sent to OpenAI")
+    else:
+        app.state.client = OpenAI(api_key=OPENAI_API_KEY)
     app.state.sessions = SessionStore(
         ttl_seconds=int(os.environ.get("SESSION_TTL_SECONDS", "1800")),
         max_sessions=int(os.environ.get("MAX_SESSIONS", "500")),
@@ -82,7 +95,9 @@ class AgentRequest(BaseModel):
 
 
 @app.get("/health")
-def healthcheck(http: Request) -> dict:
+async def healthcheck(http: Request) -> dict:
+    # async: runs on the event loop, not in the thread pool, so it answers
+    # even when every worker thread is busy (an ECS health check times out at 5 s)
     store = http.app.state.store
     return {
         "status": "alive",
@@ -90,6 +105,7 @@ def healthcheck(http: Request) -> dict:
         "city": store.catalog.city,
         "listings": len(store.catalog.listings),
         "snapshot_date": store.catalog.snapshot_date,
+        "llm": "mock" if mockLlm() else "openai",  # a mock left on in a deploy shows here
     }
 
 

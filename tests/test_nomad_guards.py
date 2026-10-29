@@ -19,6 +19,11 @@ from agent.nomad import (
     unverifiedQuotes,
 )
 from retrieval.evidence import EvidenceStore, judgeParaphrases
+import contextvars
+import time
+
+from loadtest.mock_llm import MockOpenAI
+from observability.context import startRequestStats
 
 
 @pytest.fixture(scope="module")
@@ -209,3 +214,20 @@ def test_citation_check_rejects_a_corrected_or_translated_quote():
     answer = ('"My girlfriend and I wanted a place that was central but also quiet" and '
               '"There is a desk to use the computer."')
     assert len(unverifiedQuotes(answer, [output])) == 2
+
+
+def test_paraphrase_batches_run_at_the_same_time_and_keep_request_stats():
+    # 24 candidates = 3 batches of 10; each judge call takes 0.3 s
+    candidates = [{"chunk_id": n, "listing_id": "L", "review_id": f"r{n}", "date": None,
+                   "text": "Quiet street.", "aspects": ["quiet"]} for n in range(24)]
+    client = MockOpenAI(0.3, 0.3)
+
+    def request():
+        stats = startRequestStats()
+        start = time.perf_counter()
+        judgeParaphrases(client, candidates)
+        return stats, time.perf_counter() - start
+
+    stats, seconds = contextvars.copy_context().run(request)
+    assert seconds < 0.6  # one after another it would take 0.9 s
+    assert stats.llm_calls == 3  # the threads added their calls to this request

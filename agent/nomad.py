@@ -12,7 +12,7 @@ the map shows. The LLM writes the answer only from this output.
 import datetime as dt
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -21,7 +21,7 @@ from openai import OpenAI
 from agent.judge import judgeQuestion
 from constants import ARTIFACT_VERSION, CITY, EMBEDDING_MODEL, refinedDir
 from domain.aspects import ASPECTS
-from domain.ranking import RankedListing, RankingConfig, rankListings
+from domain.ranking import RankedListing, RankingConfig, prescore, rankingFrame, rankListings
 from domain.schemas import Listing
 from ingest.insideairbnb import readListings
 from retrieval.catalog import DEFAULT_GYM_RADIUS_M, Catalog, normalizeCity
@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 SHORTLIST = 15
 RESULTS = 5
+RANKING_POOL = 100  # vectorized score picks these; rankListings ranks them (margin over SHORTLIST)
 QUOTES_PER_STANCE = 1
 MAX_QUOTE_CHARS = 300
 CLAIMABLE = [a for a, spec in ASPECTS.items() if spec.amenity is not None]
@@ -54,6 +55,15 @@ class NomadStore:
     evidence: EvidenceStore
     index: ChunkIndex | None = None  # needed for the paraphrase pass and quote context
     review_rows: dict | None = None  # review_id -> chunk rows, built with the index
+    listings_by_id: dict[str, Listing] = field(init=False, repr=False)
+    ranking_frame: pd.DataFrame = field(init=False, repr=False)
+
+    def __post_init__(self):
+        # Built once at load: turning ~11k rows into Listing objects on every
+        # search was most of a search's CPU time (and Python runs one thread at a time)
+        self.listings_by_id = {row["listing_id"]: toListing(row)
+                               for row in self.catalog.listings.to_dict("records")}
+        self.ranking_frame = rankingFrame(self.listings_by_id.values())
 
     def reviewText(self, review_id) -> str | None:
         """The full review, rebuilt from its chunks (split at sentence ends, no overlap)."""
@@ -206,6 +216,21 @@ def withParaphrases(store, client, shortlist, listings, aspects, evidence, today
     return rankListings([listings[i] for i in ids], aspects, own + extra, today, config)
 
 
+def rankCandidates(store: NomadStore, candidate_ids: list[str], aspects: list[str], today: dt.date,
+                   config: RankingConfig, pool: int = RANKING_POOL):
+    """
+    Two steps, one result: a vectorized score of every candidate picks the
+    best `pool`, then rankListings ranks and explains only those. Ranking
+    all ~11k listings one at a time in Python was the API's CPU bottleneck.
+    Returns (ranked, listings by id, precomputed evidence) of the pool.
+    """
+    scores = prescore(store.ranking_frame.loc[candidate_ids], aspects, store.evidence.scorable, today, config)
+    ids = list(scores.index[:pool])
+    listings = {i: store.listings_by_id[i] for i in ids}
+    evidence = store.evidence.precomputed(ids, aspects)
+    return rankListings(list(listings.values()), aspects, evidence, today, config), listings, evidence
+
+
 def search_stays(
     city: str,
     max_price: float | None,
@@ -256,11 +281,8 @@ def search_stays(
         return {**base, "status": "no_results",
                 "relax": relaxSuggestions(counts, max_price, must_have, max_gym_distance_m)}
 
-    listings = {row["listing_id"]: toListing(row) for row in candidates.to_dict("records")}
     today = dt.date.fromisoformat(catalog.snapshot_date) if catalog.snapshot_date else dt.date.today()
-
-    evidence = store.evidence.precomputed(listings.keys(), aspects)
-    ranked = rankListings(list(listings.values()), aspects, evidence, today, config)
+    ranked, listings, evidence = rankCandidates(store, list(candidates["listing_id"]), aspects, today, config)
     shortlist = ranked[:max(SHORTLIST, limit)]
 
     if paraphrases and aspects and client is not None and store.index is not None:
@@ -275,11 +297,10 @@ def get_stay_details(listing_id: str, aspects: list[str], store: NomadStore) -> 
     One stay found by search_stays: host claims (amenities) and the evidence
     for the requested aspects. Precomputed evidence only: no LLM call.
     """
-    rows = store.catalog.listings[store.catalog.listings["listing_id"] == listing_id]
-    if rows.empty:
+    listing = store.listings_by_id.get(listing_id)
+    if listing is None:
         return {"status": "not_found", "listing_id": listing_id,
                 "message": "Unknown listing_id: use one returned by search_stays."}
-    listing = toListing(rows.iloc[0].to_dict())
     aspects = [a for a in dict.fromkeys(aspects) if a in ASPECTS]
     today = dt.date.fromisoformat(store.catalog.snapshot_date)
     evidence = store.evidence.precomputed([listing_id], aspects)

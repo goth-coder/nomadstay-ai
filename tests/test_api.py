@@ -26,3 +26,13 @@ def test_submodule_loggers_inherit_the_project_level(monkeypatch):
     for name in ("agent.nomad", "retrieval.catalog", "storage.s3", "api.app"):
         assert logging.getLogger(name).getEffectiveLevel() == logging.DEBUG, name
     assert logging.getLogger("botocore").getEffectiveLevel() == logging.WARNING
+
+
+def test_health_runs_on_the_event_loop_not_in_the_thread_pool():
+    # A sync route waits for a free worker thread: under load the ECS health
+    # check (5 s timeout) would fail and the task would be killed when busiest
+    import inspect
+
+    from api.app import healthcheck
+
+    assert inspect.iscoroutinefunction(healthcheck)

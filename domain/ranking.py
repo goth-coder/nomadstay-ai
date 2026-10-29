@@ -14,6 +14,9 @@ import datetime as dt
 from dataclasses import dataclass, field
 from typing import Literal
 
+import numpy as np
+import pandas as pd
+
 from domain.aspects import ASPECTS
 from domain.schemas import Listing
 
@@ -195,6 +198,67 @@ def scoreListing(
 
     flags = sorted({f"{a}:{flag}" for a, v in verdicts.items() for flag in v.flags})
     return RankedListing(listing.listing_id, round(score, 4), verdicts, flags)
+
+
+def rankingFrame(listings) -> pd.DataFrame:
+    """The listing fields scoreListing reads, as columns (one row per listing, index listing_id)."""
+    rows = [{"listing_id": l.listing_id, "price": l.price, "rating": l.rating,
+             "wifi_mbps": l.wifi_mbps, "nearest_gym_m": l.nearest_gym_m,
+             **{f"claims_{a}": a in l.claims for a, spec in ASPECTS.items() if spec.amenity is not None}}
+            for l in listings]
+    return pd.DataFrame(rows).set_index("listing_id").astype({"price": float, "rating": float,
+                                                               "wifi_mbps": float, "nearest_gym_m": float})
+
+
+def prescore(
+    listings: pd.DataFrame,
+    aspects: list[str],
+    reviews: pd.DataFrame,
+    today: dt.date,
+    config: RankingConfig = DEFAULT_CONFIG,
+) -> pd.DataFrame:
+    """
+    scoreListing for many listings at once: the same formula on columns
+    (numpy) instead of one listing at a time in Python, without the details
+    (verdicts, quotes). It picks the pool that rankListings then ranks and
+    explains; scores differ from scoreListing only by its 4-decimal rounding.
+
+    listings: rankingFrame rows. reviews: listing_id, aspect, stance, date
+    (datetime64) of judged reviews with a verified quote.
+    Returns `score` and `evidence` per listing, best first (rankListings' order).
+    """
+    index = listings.index
+    total = pd.Series(0.0, index=index)
+    evidence = pd.Series(0.0, index=index)
+    for aspect in aspects:
+        rows = reviews[reviews["aspect"] == aspect]
+        age_days = ((pd.Timestamp(today) - rows["date"]).dt.days).clip(lower=0)
+        weight = (0.5 ** (age_days / config.half_life_days)).fillna(1.0)  # no date: full weight
+
+        def totalFor(stance):
+            picked = rows["stance"] == stance
+            return weight[picked].groupby(rows.loc[picked, "listing_id"]).sum().reindex(index, fill_value=0.0)
+
+        support, contradiction = totalFor("supports"), totalFor("contradicts")
+        if aspect == "gym_nearby":  # a mapped gym within the radius counts as support
+            gym = listings["nearest_gym_m"]
+            support = support + (gym.notna() & (gym <= config.gym_radius_m)) * config.map_weight
+
+        balance = (support - config.contradiction_penalty * contradiction) / (support + contradiction + 1)
+        score = (balance.clip(-1.0, 1.0) + 1) / 2
+        if ASPECTS[aspect].amenity is not None:
+            slow_wifi = (aspect == "wifi") & (listings["wifi_mbps"].fillna(0) < config.fast_wifi_mbps)
+            strength = listings[f"claims_{aspect}"] * np.where(slow_wifi, config.plain_claim, 1.0)
+            score = config.claim_weight * strength + (1 - config.claim_weight) * score
+        total += score
+        evidence += support + contradiction
+
+    aspect_score = total / len(aspects) if aspects else pd.Series(0.5, index=index)
+    rating = (listings["rating"] / 5).fillna(0.5)  # missing rating is neutral
+    out = pd.DataFrame({"score": (1 - config.rating_weight) * aspect_score + config.rating_weight * rating,
+                        "evidence": evidence, "price": listings["price"].fillna(np.inf)})
+    # stable sort, like rankListings: ties keep the candidates' order
+    return out.sort_values(["score", "evidence", "price"], ascending=[False, False, True], kind="stable")
 
 
 def rankListings(
