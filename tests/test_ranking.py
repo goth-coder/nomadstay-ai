@@ -8,7 +8,13 @@ from datetime import date, timedelta
 import pytest
 
 from domain.aspects import ASPECTS
-from domain.ranking import Evidence, judgeAspect, rankListings, scoreListing
+from domain.ranking import (
+    Evidence,
+    RankingConfig,
+    judgeAspect,
+    rankListings,
+    scoreListing,
+)
 from domain.schemas import Listing
 
 TODAY = date(2026, 9, 19)  # snapshot date, never the real clock
@@ -144,6 +150,42 @@ def test_far_or_unmapped_gym_is_not_a_contradiction():
 
         assert result.verdict == "unknown"
         assert result.contradiction == 0
+
+
+def test_mapped_metro_station_within_radius_is_transport_evidence():
+    stay = listing(nearest_metro_m=287.6, nearest_metro_name="Trindade")
+
+    result = judgeAspect(stay, "transport", [], TODAY)
+
+    assert result.verdict == "evidence_only"  # nothing to claim: transport has no amenity
+    assert result.evidence[0].source == "map"
+    assert result.evidence[0].text == "Trindade, ~288 m in a straight line (OpenStreetMap)"
+
+
+def test_far_or_unmapped_station_is_not_a_contradiction():
+    for stay in (listing(nearest_metro_m=900), listing(nearest_metro_m=None)):
+        result = judgeAspect(stay, "transport", [], TODAY)
+
+        assert result.verdict == "unknown"
+        assert result.contradiction == 0
+
+
+def test_map_evidence_reads_only_its_own_distance():
+    # a station but no gym, and a gym but no station: each aspect sees only its kind
+    station_only = listing(nearest_metro_m=200, nearest_gym_m=None)
+    gym_only = listing(nearest_gym_m=200, nearest_metro_m=None)
+
+    assert judgeAspect(station_only, "transport", [], TODAY).verdict == "evidence_only"
+    assert judgeAspect(station_only, "gym_nearby", [], TODAY).verdict == "unknown"
+    assert judgeAspect(gym_only, "transport", [], TODAY).verdict == "unknown"
+    assert judgeAspect(gym_only, "gym_nearby", [], TODAY).verdict == "evidence_only"
+
+
+def test_unnamed_station_and_its_radius():
+    stay = listing(nearest_metro_m=450)
+
+    assert judgeAspect(stay, "transport", [], TODAY).evidence[0].text.startswith("a metro station, ~450 m")
+    assert judgeAspect(stay, "transport", [], TODAY, RankingConfig(metro_radius_m=400)).evidence == []
 
 
 def test_guest_mention_of_nearby_gym_counts():

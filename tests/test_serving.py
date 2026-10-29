@@ -6,8 +6,10 @@ Serving: the packaged set (ingest/package.py), loading it locally or from S3
 import json
 import logging
 import shutil
+from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 from conftest import MODEL, fakeClient, textResponse, toolCallResponse
 from fastapi.testclient import TestClient
@@ -16,14 +18,16 @@ from test_sessions_dynamo import FakeTable
 
 import api.app as app_module
 from agent import nomad
-from agent.nomad import loadNomadStore, loadStore
+from agent.nomad import loadNomadStore, loadStore, search_stays
 from api.sessions import DynamoSessionStore
+from ingest.package import packageServingSet
 from observability.context import currentRequestId
-from retrieval.chunk_index import MANIFEST
+from retrieval.chunk_index import LISTINGS_FILE, MANIFEST
 from retrieval.evidence import EVIDENCE_FILE, SERVING_FILES
 from storage import s3
 
 RIBEIRA = "1436961951661730861"
+TRINDADE = "40001006"  # Trindade Metro Studio: the fixture's station is ~25 m away
 SEARCH = {"city": "Porto", "max_price": 100, "currency": "EUR", "must_have": [],
           "preferences": ["wifi"], "max_gym_distance_m": None}
 
@@ -40,6 +44,65 @@ def test_package_adds_evidence_to_the_index_set(serving, built):
     assert manifest["evidence"]["pairs"] > 0
     # the index is reused, not rebuilt
     assert manifest["files"]["chunks.index"] == built[1]["files"]["chunks.index"]
+
+
+def test_package_takes_map_data_from_processed(serving, built):
+    manifest = json.loads((serving / MANIFEST).read_text(encoding="utf-8"))
+    listings = pd.read_parquet(serving / LISTINGS_FILE).set_index("listing_id")
+
+    assert listings.loc[TRINDADE, "nearest_metro_name"] == "Trindade"
+    assert manifest["map_data"]["pois_by_kind"] == {"gym": 3, "metro": 3}
+    assert manifest["map_data"]["listings_with"]["nearest_metro_m"] == len(listings)
+
+
+def repackage(serving, built, processed, tmp_path, change) -> Path:
+    """Package again from a copy of processed/ after `change(listings)` (a later ingest.osm run)."""
+    copy = tmp_path / "processed"
+    shutil.copytree(processed, copy)
+    listings = pd.read_parquet(copy / LISTINGS_FILE)
+    change(listings).to_parquet(copy / LISTINGS_FILE, index=False)
+    out = tmp_path / "serving"
+    packageServingSet(built[0], copy, out, 4)
+    return out
+
+
+def test_a_new_osm_run_reaches_the_serving_set_without_a_rebuild(serving, built, processed, tmp_path):
+    def stationMoved(listings):
+        listings.loc[listings["listing_id"] == TRINDADE, "nearest_metro_m"] = 999.0
+        listings["name"] = "changed after the build"  # not a map column: must not leak in
+        return listings
+
+    out = repackage(serving, built, processed, tmp_path, stationMoved)
+
+    listings = pd.read_parquet(out / LISTINGS_FILE)
+    assert listings.set_index("listing_id").loc[TRINDADE, "nearest_metro_m"] == 999.0
+    assert (listings["name"] == pd.read_parquet(built[0] / LISTINGS_FILE)["name"]).all()
+    manifest = json.loads((out / MANIFEST).read_text(encoding="utf-8"))
+    for name in ["chunks.index", "chunks.parquet"]:  # same index: FAISS row i is still chunk i
+        assert manifest["files"][name] == built[1]["files"][name]
+    assert loadNomadStore(out, MODEL).listings_by_id[TRINDADE].nearest_metro_m == 999.0
+
+
+def test_package_refuses_processed_listings_without_metro_columns(serving, built, processed, tmp_path):
+    with pytest.raises(ValueError, match="ingest.osm"):
+        repackage(serving, built, processed, tmp_path,
+                  lambda listings: listings.drop(columns=["nearest_metro_m", "nearest_metro_name"]))
+
+
+def test_package_refuses_when_a_built_listing_is_missing(serving, built, processed, tmp_path):
+    with pytest.raises(ValueError, match="rebuild the index set"):
+        repackage(serving, built, processed, tmp_path,
+                  lambda listings: listings[listings["listing_id"] != TRINDADE])
+
+
+def test_transport_search_shows_the_mapped_station(serving):
+    result = search_stays(city="Porto", max_price=None, currency=None, must_have=[],
+                          preferences=["transport"], max_gym_distance_m=None,
+                          store=loadNomadStore(serving, MODEL), paraphrases=False, limit=20)
+
+    trindade = next(r for r in result["results"] if r["listing_id"] == TRINDADE)
+    assert trindade["aspects"]["transport"]["map"].startswith("Trindade, ~")
+    assert "metro stations" in result["attribution"]
 
 
 def test_loader_refuses_a_tampered_evidence_file(serving, tmp_path):

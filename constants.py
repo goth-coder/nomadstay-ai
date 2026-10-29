@@ -18,7 +18,7 @@ CITY_CONFIG = {
 
 # What the API serves: rag/v{ARTIFACT_VERSION}/{CITY}/ (local copy or S3)
 CITY = "porto"
-ARTIFACT_VERSION = 3  # v2 index + chunks + listings + pois, plus evidence.parquet
+ARTIFACT_VERSION = 4  # v2 index + chunks, evidence.parquet, map data (gyms, metro) from ingest.osm
 EMBEDDING_MODEL = "multilingual-minilm"
 
 

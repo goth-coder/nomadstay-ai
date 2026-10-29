@@ -49,6 +49,7 @@ class RankingConfig:
     fast_wifi_mbps: int = 100  # listed speed test counts as a full claim from here
     plain_claim: float = 0.6  # strength of a claim without a speed test
     gym_radius_m: float = 500
+    metro_radius_m: float = 500
     map_weight: float = 1.0
     rating_weight: float = 0.1
 
@@ -85,19 +86,24 @@ def recencyWeight(day: dt.date | None, today: dt.date, config: RankingConfig) ->
 
 def mapEvidence(listing: Listing, aspect: str, config: RankingConfig) -> list[Evidence]:
     """
-    Objective evidence from the map. A missing or far gym is not a
-    contradiction: OpenStreetMap may simply not have it.
+    Objective evidence from the map: a gym (gym_nearby) or a metro station
+    (transport) within the radius. A missing or far one is not a
+    contradiction: OpenStreetMap may simply not have it, and buses may serve the stay.
     """
-    if aspect != "gym_nearby" or listing.nearest_gym_m is None:
+    if aspect == "gym_nearby":
+        distance, name, radius = listing.nearest_gym_m, listing.nearest_gym_name or "a gym", config.gym_radius_m
+    elif aspect == "transport":
+        distance, name, radius = (listing.nearest_metro_m, listing.nearest_metro_name or "a metro station",
+                                  config.metro_radius_m)
+    else:
         return []
-    if listing.nearest_gym_m > config.gym_radius_m:
+    if distance is None or distance > radius:
         return []
-    name = listing.nearest_gym_name or "a gym"
     return [
         Evidence(
             listing_id=listing.listing_id, aspect=aspect, source="map", stance="supports", ref="osm",
-            text=f"{name}, ~{round(listing.nearest_gym_m)} m in a straight line (OpenStreetMap)",
-            distance_m=listing.nearest_gym_m,
+            text=f"{name}, ~{round(distance)} m in a straight line (OpenStreetMap)",
+            distance_m=distance,
         )
     ]
 
@@ -203,11 +209,11 @@ def scoreListing(
 def rankingFrame(listings) -> pd.DataFrame:
     """The listing fields scoreListing reads, as columns (one row per listing, index listing_id)."""
     rows = [{"listing_id": l.listing_id, "price": l.price, "rating": l.rating,
-             "wifi_mbps": l.wifi_mbps, "nearest_gym_m": l.nearest_gym_m,
+             "wifi_mbps": l.wifi_mbps, "nearest_gym_m": l.nearest_gym_m, "nearest_metro_m": l.nearest_metro_m,
              **{f"claims_{a}": a in l.claims for a, spec in ASPECTS.items() if spec.amenity is not None}}
             for l in listings]
-    return pd.DataFrame(rows).set_index("listing_id").astype({"price": float, "rating": float,
-                                                               "wifi_mbps": float, "nearest_gym_m": float})
+    return pd.DataFrame(rows).set_index("listing_id").astype({
+        "price": float, "rating": float, "wifi_mbps": float, "nearest_gym_m": float, "nearest_metro_m": float})
 
 
 def prescore(
@@ -240,9 +246,13 @@ def prescore(
             return weight[picked].groupby(rows.loc[picked, "listing_id"]).sum().reindex(index, fill_value=0.0)
 
         support, contradiction = totalFor("supports"), totalFor("contradicts")
-        if aspect == "gym_nearby":  # a mapped gym within the radius counts as support
-            gym = listings["nearest_gym_m"]
-            support = support + (gym.notna() & (gym <= config.gym_radius_m)) * config.map_weight
+        # a mapped gym or metro station within the radius counts as support (mapEvidence)
+        mapped = {"gym_nearby": ("nearest_gym_m", config.gym_radius_m),
+                  "transport": ("nearest_metro_m", config.metro_radius_m)}
+        if aspect in mapped:
+            column, radius = mapped[aspect]
+            distance = listings[column]
+            support = support + (distance.notna() & (distance <= radius)) * config.map_weight
 
         balance = (support - config.contradiction_penalty * contradiction) / (support + contradiction + 1)
         score = (balance.clip(-1.0, 1.0) + 1) / 2

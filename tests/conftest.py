@@ -75,11 +75,14 @@ def processed(tmp_path_factory):
     snapshot = json.loads((MINI / "expected.json").read_text(encoding="utf-8"))["snapshot_date"]
     out = tmp_path_factory.mktemp("processed")
     ingest(MINI / "listings.csv", MINI / "reviews.csv", out, "porto", snapshot)
-    raw = json.loads((FIXTURES / "overpass_gyms.json").read_text(encoding="utf-8"))
-    pois = osm.parsePois(raw)
+    pois = pd.concat([
+        osm.parsePois(json.loads((FIXTURES / f"overpass_{kind}s.json").read_text(encoding="utf-8")), kind)
+        for kind in ["gym", "metro"]], ignore_index=True)
     pois.to_parquet(out / "pois.parquet", index=False)
-    writeListings(osm.addNearestPoi(readListings(out / "listings.parquet"), pois),
-                  out / "listings.parquet")
+    listings = readListings(out / "listings.parquet")
+    for kind in ["gym", "metro"]:
+        listings = osm.addNearestPoi(listings, pois, kind)
+    writeListings(listings, out / "listings.parquet")
     updateReport(out / "ingest_report.json", "osm",
                  {"attribution": osm.ATTRIBUTION, "fetched_date": "2026-10-22"})
     return out

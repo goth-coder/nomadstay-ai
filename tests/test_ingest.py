@@ -317,3 +317,63 @@ def test_fetchPois_reuses_saved_file(tmp_path, monkeypatch):
     monkeypatch.setattr(osm.httpx, "post", noNetwork)
     raw, path = osm.fetchPois("porto", today=date(2026, 10, 22))
     assert path == saved and len(raw["elements"]) == 4
+
+
+def test_metroQuery_covers_both_tags_metro_do_porto_may_use():
+    query = osm.metroQuery((41.1, -8.7, 41.2, -8.5))
+    assert 'station~"subway|light_rail"' in query
+    assert "subway=yes" in query and "light_rail=yes" in query
+    assert query.count("[!construction]") == 3
+    assert "(41.1,-8.7,41.2,-8.5)" in query and "out center" in query
+
+
+def test_parsePois_metro_station_mapped_twice_keeps_both_and_skips_construction():
+    raw = json.loads((FIXTURES / "overpass_metros.json").read_text(encoding="utf-8"))
+    stations = osm.parsePois(raw, "metro")
+    # way/2004 is a station still being built, next to Ribeira Nomad Loft: not evidence
+    assert stations["osm_id"].tolist() == ["node/2001", "relation/2002", "node/2003"]
+    assert (stations["kind"] == "metro").all()
+    assert stations["name"].nunique() == 2  # the station node and its stop area
+
+
+def test_fetchPois_asks_overpass_for_the_kind_and_saves_it_apart(tmp_path, monkeypatch):
+    monkeypatch.setattr(osm, "RAW_DIR", tmp_path)
+    raw = json.loads((FIXTURES / "overpass_metros.json").read_text(encoding="utf-8"))
+    sent = []
+
+    def fakePost(url, data, headers, timeout):
+        sent.append(data["data"])
+        return type("Response", (), {"raise_for_status": lambda self: None, "json": lambda self: raw})()
+
+    monkeypatch.setattr(osm.httpx, "post", fakePost)
+    got, path = osm.fetchPois("porto", "metro", today=date(2026, 10, 22))
+
+    assert "light_rail" in sent[0] and "fitness" not in sent[0]
+    assert path == tmp_path / "porto" / "osm_metros_2026-10-22.json"
+    assert json.loads(path.read_text(encoding="utf-8")) == got == raw
+
+
+def test_main_adds_gym_and_metro_columns_and_reports_both(processed, tmp_path, monkeypatch):
+    out = tmp_path / "processed"
+    out.mkdir()
+    (out / "listings.parquet").write_bytes((processed / "listings.parquet").read_bytes())
+    raw_dir = tmp_path / "raw" / "porto"
+    raw_dir.mkdir(parents=True)
+    today = date.today().isoformat()  # fetchPois reuses today's files: no network
+    for kind in ["gym", "metro"]:
+        (raw_dir / f"osm_{kind}s_{today}.json").write_text(
+            (FIXTURES / f"overpass_{kind}s.json").read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(osm, "RAW_DIR", tmp_path / "raw")
+    monkeypatch.setattr(osm, "processedDir", lambda city: out)
+
+    osm.main(["--city", "porto"])
+
+    listings = readListings(out / "listings.parquet")
+    trindade = listings.set_index("listing_id").loc["40001006"]
+    assert trindade["nearest_metro_name"] == "Trindade" and trindade["nearest_metro_m"] < 100
+    assert listings["nearest_gym_m"].notna().all()
+    assert list(listings.columns) == list(Listing.model_fields)
+    assert sorted(pd.read_parquet(out / "pois.parquet")["kind"].unique()) == ["gym", "metro"]
+    report = json.loads((out / "ingest_report.json").read_text(encoding="utf-8"))["osm"]
+    assert (report["gyms"], report["metro_stations"], report["metro_station_names"]) == (3, 3, 2)
+    assert report["fetched_date"] == today

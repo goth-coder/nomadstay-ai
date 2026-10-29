@@ -182,6 +182,7 @@ def normalizeListings(df: pd.DataFrame, city: str, snapshot: str) -> pd.DataFram
     out["price"] = out["price"].astype("float64")
     out["rating"] = out["rating"].astype("float64")
     out["nearest_gym_m"] = out["nearest_gym_m"].astype("float64")
+    out["nearest_metro_m"] = out["nearest_metro_m"].astype("float64")
     out.attrs["invalid"] = {"count": len(invalid), "examples": invalid[:5]}
     out.attrs["total_rows"] = len(df)
     return out

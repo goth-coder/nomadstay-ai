@@ -1,0 +1,21 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API (fake fixture)",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-22T12:00:00Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {"type": "node", "id": 2001, "lat": 41.1452, "lon": -8.6148,
+     "tags": {"railway": "station", "station": "light_rail", "name": "Trindade"}},
+    {"type": "relation", "id": 2002, "center": {"lat": 41.1453, "lon": -8.6147},
+     "members": [],
+     "tags": {"public_transport": "station", "light_rail": "yes", "name": "Trindade"}},
+    {"type": "node", "id": 2003, "lat": 41.2, "lon": -8.7,
+     "tags": {"railway": "station", "station": "subway", "name": "Far Away"}},
+    {"type": "way", "id": 2004, "center": {"lat": 41.1401, "lon": -8.6201},
+     "nodes": [1, 2],
+     "tags": {"railway": "station", "light_rail": "yes", "construction": "rail",
+              "construction:railway": "station", "name": "Not Open Yet"}}
+  ]
+}

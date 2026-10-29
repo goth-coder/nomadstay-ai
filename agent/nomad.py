@@ -46,7 +46,8 @@ MAX_QUOTE_CHARS = 300
 CLAIMABLE = [a for a, spec in ASPECTS.items() if spec.amenity is not None]
 MAX_REVIEW_LISTINGS = 5  # search_reviews: bounds cost to <= 20 excerpts, <= 2 judge calls
 QUOTES_PER_LISTING = 3
-ATTRIBUTION = "Listings and reviews: Inside Airbnb (CC BY 4.0). Gyms: © OpenStreetMap contributors (ODbL)."
+ATTRIBUTION = ("Listings and reviews: Inside Airbnb (CC BY 4.0). "
+               "Gyms and metro stations: © OpenStreetMap contributors (ODbL).")
 
 
 @dataclass
@@ -271,7 +272,8 @@ def search_stays(
             (f"Prices are indicative nightly prices in {catalog.currency} from the "
              f"{catalog.snapshot_date} snapshot, not live quotes."),
             "Availability is unknown.",
-            "Gym distances are straight-line and approximate (listing locations are shifted up to ~150 m).",
+            ("Gym and metro station distances are straight-line and approximate "
+             "(listing locations are shifted up to ~150 m)."),
         ],
         "attribution": ATTRIBUTION,
     }

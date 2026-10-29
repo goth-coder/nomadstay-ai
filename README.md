@@ -6,7 +6,7 @@ nearby). It ranks the stays and **keeps what the host claims apart from what
 guests actually reported**, quoting the guests.
 
 Data: [Inside Airbnb](https://insideairbnb.com) Porto snapshot of 2026-09-19
-(11,190 listings, 1.18M reviews) and gyms from OpenStreetMap.
+(11,190 listings, 1.18M reviews) and gyms and metro stations from OpenStreetMap.
 Not affiliated with Airbnb.
 
 ```
@@ -30,7 +30,7 @@ POST /agent/run  {"message": "Un logement calme à Porto pour moins de 120 € l
 offline (once per snapshot)                        online (per question)
 ──────────────────────────                         ─────────────────────
 Inside Airbnb CSVs ─► clean, filter, sample        user message
-OpenStreetMap gyms ─► nearest gym per listing          │
+OpenStreetMap ─► nearest gym and metro station         │
 reviews ─► chunks ─► embeddings ─► FAISS           gpt-4o-mini agent loop (tool calling)
 review × aspect ─► LLM judge (Batch API)               │
    supports / contradicts + quote,                     ├─ search_stays: filters in code (city,
@@ -46,7 +46,8 @@ versioned serving set on S3 ─────────────────�
 - **Filters run in code, never in the LLM.** City, price and must-have
   amenities are applied by `search_stays`; the model only picks the arguments.
 - **Three kinds of evidence, kept apart:** the host's claim (amenities list),
-  guest reviews (quote + date) and the map (gym distance). Each aspect gets a
+  guest reviews (quote + date) and the map (gym and metro station distance,
+  stations still under construction left out). Each aspect gets a
   verdict: `verified` (claimed and confirmed), `claim_only`, `evidence_only`,
   `mixed`, `contradicted`, `unknown`. Ranking weighs recent reviews more and
   penalises contradictions.
@@ -111,7 +112,7 @@ filter message = "request" and route = "/agent/run"
 
 ## Run it
 
-Python 3.12. The serving set (`data/refined/v3/porto`) comes from the
+Python 3.12. The serving set (`data/refined/v4/porto`) comes from the
 offline pipeline below or from your S3 bucket.
 
 ```bash
@@ -134,10 +135,10 @@ Offline pipeline (once per snapshot):
 
 ```bash
 uv run python -m ingest.insideairbnb --city porto      # download, clean, sample reviews
-uv run python -m ingest.osm --city porto               # nearest gym per listing
+uv run python -m ingest.osm --city porto               # nearest gym and metro station
 uv run python -m ingest.build --city porto --model multilingual-minilm --version 2
 uv run python -m ingest.stance submit --city porto     # Batch API; then: collect
-uv run python -m ingest.package --city porto --from-version 2 --version 3 [--upload]
+uv run python -m ingest.package --city porto --from-version 2 --version 4 [--upload]
 ```
 
 Tests (no OpenAI or S3 calls; a synthetic mini snapshot in `tests/fixtures/`):
@@ -168,11 +169,13 @@ storage/        S3 artifacts
 ## Limits
 
 - One city (Porto) and one snapshot: prices are indicative, availability unknown.
-- Gym distances are straight lines; listing locations are shifted up to ~150 m.
-- Sessions live in memory: one task, no horizontal scaling yet.
+- Gym and metro distances are straight lines; listing locations are shifted up to ~150 m.
+  Only metro stations are mapped: buses are known only from guest reviews.
+- Sessions live in DynamoDB (`SESSION_TABLE`) so any task can answer a follow-up;
+  without it they stay in memory (one task only).
 - gpt-4o-mini still edits a quote or overstates "verified" now and then (see Results).
 
 ## Data and license
 
 Code: MIT. Listings and reviews: Inside Airbnb, CC BY 4.0 (also the review
-excerpts in `eval/labels/`). Gyms: © OpenStreetMap contributors, ODbL.
+excerpts in `eval/labels/`). Gyms and metro stations: © OpenStreetMap contributors, ODbL.

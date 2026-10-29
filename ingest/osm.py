@@ -1,10 +1,10 @@
 """
-Points of interest from OpenStreetMap (gyms) and distance from each stay.
+Points of interest from OpenStreetMap (gyms, metro stations) and distance from each stay.
 
     python -m ingest.osm --city porto
 
-Run after ingest.insideairbnb: it adds nearest_gym_m / nearest_gym_name to
-listings.parquet. Caveats: Inside Airbnb anonymizes coordinates up to ~150 m,
+Run after ingest.insideairbnb: it adds nearest_gym_m / nearest_gym_name and
+nearest_metro_m / nearest_metro_name to listings.parquet. Caveats: Inside Airbnb anonymizes coordinates up to ~150 m,
 and distances are straight-line (haversine), not walking routes.
 Data: © OpenStreetMap contributors, ODbL.
 """
@@ -23,7 +23,7 @@ from constants import CITY_CONFIG, RAW_DIR, processedDir
 from ingest.insideairbnb import readListings, updateReport, writeListings
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
-USER_AGENT = "NomadStay-ingest/0.1 (offline gym lookup for a portfolio project)"
+USER_AGENT = "NomadStay-ingest/0.1 (offline gym and metro lookup for a portfolio project)"
 ATTRIBUTION = "© OpenStreetMap contributors, ODbL"
 EARTH_RADIUS_M = 6371008.8
 
@@ -39,14 +39,30 @@ def gymQuery(bbox: tuple) -> str:
     )
 
 
-def fetchPois(city: str, today: date | None = None) -> tuple[dict, Path]:
-    """Gyms in the city bbox as raw Overpass JSON. Reuses today's saved file."""
+def metroQuery(bbox: tuple) -> str:
+    # Metro do Porto is light rail; OSM may tag its stations either way.
+    # [!construction]: new lines' stations are mapped while still being built
+    area = ",".join(str(x) for x in bbox)
+    return (
+        "[out:json][timeout:60];("
+        f'nwr[railway=station][station~"subway|light_rail"][!construction]({area});'
+        f"nwr[public_transport=station][subway=yes][!construction]({area});"
+        f"nwr[public_transport=station][light_rail=yes][!construction]({area});"
+        ");out center;"
+    )
+
+
+QUERIES = {"gym": gymQuery, "metro": metroQuery}
+
+
+def fetchPois(city: str, kind: str = "gym", today: date | None = None) -> tuple[dict, Path]:
+    """POIs of one kind (QUERIES) in the city bbox as raw Overpass JSON. Reuses today's saved file."""
     today = today or date.today()
-    path = RAW_DIR / city / f"osm_gyms_{today.isoformat()}.json"
+    path = RAW_DIR / city / f"osm_{kind}s_{today.isoformat()}.json"
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8")), path
 
-    response = httpx.post(OVERPASS_URL, data={"data": gymQuery(CITY_CONFIG[city]["bbox"])},
+    response = httpx.post(OVERPASS_URL, data={"data": QUERIES[kind](CITY_CONFIG[city]["bbox"])},
                           headers={"User-Agent": USER_AGENT}, timeout=90)
     response.raise_for_status()
     raw = response.json()
@@ -59,11 +75,17 @@ def fetchPois(city: str, today: date | None = None) -> tuple[dict, Path]:
 
 
 def parsePois(raw: dict, kind: str = "gym") -> pd.DataFrame:
-    """Overpass elements -> osm_id ("node/1", "way/2"), kind, name, lat, lon."""
+    """
+    Overpass elements -> osm_id ("node/1", "way/2"), kind, name, lat, lon.
+    Places still under construction are skipped: a station that does not run
+    yet is no evidence (also for files saved before the query excluded them).
+    """
     rows = {}
     for e in raw.get("elements", []):
         point = e if "lat" in e else e.get("center", {})  # ways/relations carry a center
         if "lat" not in point or "lon" not in point:
+            continue
+        if any(key == "construction" or key.startswith("construction:") for key in e.get("tags", {})):
             continue
         osm_id = f"{e['type']}/{e['id']}"
         rows[osm_id] = {
@@ -96,27 +118,34 @@ def addNearestPoi(listings: pd.DataFrame, pois: pd.DataFrame, kind: str = "gym")
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Add nearest gym to ingested listings")
+    parser = argparse.ArgumentParser(description="Add nearest gym and metro station to ingested listings")
     parser.add_argument("--city", default="porto", choices=sorted(CITY_CONFIG))
     args = parser.parse_args(argv)
 
     out_dir = processedDir(args.city)
-    raw, raw_path = fetchPois(args.city)
-    pois = parsePois(raw)
+    fetched = {kind: fetchPois(args.city, kind) for kind in QUERIES}
+    pois = pd.concat([parsePois(raw, kind) for kind, (raw, _) in fetched.items()], ignore_index=True)
     pois.to_parquet(out_dir / "pois.parquet", index=False)
 
-    listings = addNearestPoi(readListings(out_dir / "listings.parquet"), pois, "gym")
+    listings = readListings(out_dir / "listings.parquet")
+    for kind in QUERIES:
+        listings = addNearestPoi(listings, pois, kind)
     writeListings(listings, out_dir / "listings.parquet")
 
+    gym_raw, gym_path = fetched["gym"]
+    gyms, stations = pois[pois["kind"] == "gym"], pois[pois["kind"] == "metro"]
     report = {
         "attribution": ATTRIBUTION,
-        "raw_file": raw_path.name,
-        "fetched_date": raw_path.stem.removeprefix("osm_gyms_"),
-        "osm_data_timestamp": raw.get("osm3s", {}).get("timestamp_osm_base"),
+        "raw_files": [path.name for _, path in fetched.values()],
+        "fetched_date": gym_path.stem.removeprefix("osm_gyms_"),
+        "osm_data_timestamp": gym_raw.get("osm3s", {}).get("timestamp_osm_base"),
         "updated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "bbox": CITY_CONFIG[args.city]["bbox"],
-        "gyms": len(pois),
-        "gyms_without_name": int(pois["name"].isna().sum()),
+        "gyms": len(gyms),
+        "gyms_without_name": int(gyms["name"].isna().sum()),
+        # a station can be mapped twice (station node + stop area): the names show how many are real
+        "metro_stations": len(stations),
+        "metro_station_names": int(stations["name"].nunique()),
         "distance": "straight-line haversine; listing coordinates anonymized up to ~150 m",
     }
     updateReport(out_dir / "ingest_report.json", "osm", report)

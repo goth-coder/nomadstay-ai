@@ -18,6 +18,7 @@ from retrieval.chunk_index import (
     ARTIFACT_FILES,
     CHUNKS_FILE,
     INDEX_FILE,
+    LISTINGS_FILE,
     MANIFEST,
     loadChunkIndex,
     search,
@@ -88,6 +89,17 @@ def test_build_refuses_listings_without_nearest_gym(tmp_path):
     with pytest.raises(SystemExit, match="ingest.osm"):
         buildArtifacts(tmp_path, tmp_path / "out", "porto", MODEL, 2)
     assert not (tmp_path / "out").exists()
+
+
+def test_build_refuses_listings_from_an_osm_run_without_metro(processed, tmp_path):
+    # processed/ from before metro stations were added to ingest.osm
+    copy = tmp_path / "processed"
+    shutil.copytree(processed, copy)
+    listings = pd.read_parquet(copy / LISTINGS_FILE).drop(columns=["nearest_metro_m", "nearest_metro_name"])
+    listings.to_parquet(copy / LISTINGS_FILE, index=False)
+
+    with pytest.raises(SystemExit, match="nearest_metro_m"):
+        buildArtifacts(copy, tmp_path / "out", "porto", MODEL, 2)
 
 
 def test_limit_builds_a_partial_index(processed, tmp_path):

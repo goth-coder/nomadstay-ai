@@ -76,10 +76,10 @@ def embedChunks(texts: list[str], key: str, batch_size: int = 32) -> np.ndarray:
 
 
 def checkProcessed(listings: pd.DataFrame) -> None:
-    # insideairbnb re-runs wipe nearest_gym_m, and the gym aspect depends on it
-    if not listings["nearest_gym_m"].notna().any():
-        raise SystemExit("listings.parquet has no nearest_gym_m values: "
-                         "run `python -m ingest.osm` first")
+    # insideairbnb re-runs wipe the map columns, and gym_nearby / transport depend on them
+    for column in ["nearest_gym_m", "nearest_metro_m"]:
+        if column not in listings.columns or not listings[column].notna().any():
+            raise SystemExit(f"listings.parquet has no {column} values: run `python -m ingest.osm` first")
 
 
 def manifestSources(report: dict) -> dict:

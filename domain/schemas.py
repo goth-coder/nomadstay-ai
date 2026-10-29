@@ -43,6 +43,10 @@ class Listing(BaseModel):
     nearest_gym_m: float | None = Field(default=None, ge=0)
     nearest_gym_name: str | None = None
 
+    # Straight-line distance to the nearest mapped metro station (OpenStreetMap).
+    nearest_metro_m: float | None = Field(default=None, ge=0)
+    nearest_metro_name: str | None = None
+
     rating: float | None = Field(default=None, ge=0, le=5)
     number_of_reviews: int = 0
     last_review: dt.date | None = None
