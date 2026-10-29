@@ -12,10 +12,12 @@ import pytest
 from conftest import MODEL, fakeClient, textResponse, toolCallResponse
 from fastapi.testclient import TestClient
 from test_chunk_index import FakeS3
+from test_sessions_dynamo import FakeTable
 
 import api.app as app_module
 from agent import nomad
 from agent.nomad import loadNomadStore, loadStore
+from api.sessions import DynamoSessionStore
 from observability.context import currentRequestId
 from retrieval.chunk_index import MANIFEST
 from retrieval.evidence import EVIDENCE_FILE, SERVING_FILES
@@ -159,6 +161,32 @@ def test_follow_up_uses_stay_details_in_the_same_session(api):
     history = client.get(f"/agent/sessions/{first['session_id']}", headers=headers).json()["history"]
     assert [i["name"] for i in history if i.get("type") == "function_call"] == [
         "search_stays", "get_stay_details"]
+
+
+def test_follow_up_reaches_another_task_through_the_session_table(api):
+    client, queue, _ = api
+    table = FakeTable()
+    queue += [textResponse("Which city?"), textResponse("Porto, then.")]
+    headers = {"X-API-Key": "test-key"}
+
+    client.app.state.sessions = DynamoSessionStore(table)
+    first = client.post("/agent/run", headers=headers, json={"message": "Find me a stay"}).json()
+    client.app.state.sessions = DynamoSessionStore(table)  # the load balancer picked another task
+    second = client.post("/agent/run", headers=headers,
+                         json={"message": "Porto", "session_id": first["session_id"]})
+
+    assert second.status_code == 200
+    history = client.get(f"/agent/sessions/{first['session_id']}", headers=headers).json()["history"]
+    assert [i["content"] for i in history if i.get("role") == "user"] == ["Find me a stay", "Porto"]
+
+
+def test_a_misspelled_field_is_rejected_not_a_new_session(api):
+    client, _, _ = api
+
+    response = client.post("/agent/run", headers={"X-API-Key": "test-key"},
+                           json={"message": "Tell me more", "session": "abc"})
+
+    assert response.status_code == 422
 
 
 class RequestIdRecorder(logging.Handler):

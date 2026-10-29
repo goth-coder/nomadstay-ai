@@ -15,6 +15,7 @@
     "environment": [
       { "name": "BUCKET", "value": "<ARTIFACTS_BUCKET>" },
       { "name": "AWS_REGION", "value": "<AWS_REGION>" },
+      { "name": "SESSION_TABLE", "value": "<SESSION_TABLE>" },
       { "name": "LOG_LEVEL", "value": "INFO" }
     ],
     "secrets": [

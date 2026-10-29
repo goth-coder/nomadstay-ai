@@ -52,9 +52,11 @@ def toolCallResponse(name: str, args: dict, call_id: str = "call_1") -> SimpleNa
 
 
 @pytest.fixture(autouse=True)
-def realClientUnlessAsked(monkeypatch):
-    # A local .env may turn the load-test mock on; tests opt in explicitly (test_mock_llm.py)
+def localServicesOnly(monkeypatch):
+    # A local .env may turn the load-test mock on or point sessions to the real
+    # DynamoDB table; tests opt in explicitly (test_mock_llm.py, a FakeTable)
     monkeypatch.delenv("MOCK_LLM", raising=False)
+    monkeypatch.delenv("SESSION_TABLE", raising=False)
 
 
 # ---------- artifact set built from the mini_porto fixture ----------

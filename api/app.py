@@ -7,12 +7,12 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
 from openai import OpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from agent.agent import runAgent
 from agent.nomad import loadStore, unverifiedQuotes
 from api.auth import requireApiKey
-from api.sessions import SessionStore, trimToLastTurns
+from api.sessions import sessionStoreFromEnv, trimToLastTurns
 from constants import EMBEDDING_MODEL
 from observability.access_log import logRequest, routeTemplate
 from observability.context import newRequestId, startRequestStats
@@ -60,10 +60,7 @@ async def lifespan(app: FastAPI):
         logger.warning("MOCK_LLM is on: answers are fake, nothing is sent to OpenAI")
     else:
         app.state.client = OpenAI(api_key=OPENAI_API_KEY)
-    app.state.sessions = SessionStore(
-        ttl_seconds=int(os.environ.get("SESSION_TTL_SECONDS", "1800")),
-        max_sessions=int(os.environ.get("MAX_SESSIONS", "500")),
-    )
+    app.state.sessions = sessionStoreFromEnv()
     yield
 
     app.state.client.close()
@@ -90,6 +87,9 @@ async def observeRequest(request: Request, call_next):
 
 
 class AgentRequest(BaseModel):
+    # A misspelled field ("session") is a 422, not a silent new session
+    model_config = ConfigDict(extra="forbid")
+
     message: str = Field(min_length=1,max_length=2000)
     session_id: str | None = None
 
@@ -144,6 +144,7 @@ def askAgent(request: AgentRequest, http: Request) -> dict:
 
         raise HTTPException(status_code=500, detail="Agent execution failed")
 
+    sessions.save(session_id, context)  # DynamoDB: the turn only exists after this
     response = {"session_id": session_id, "answer": answer}
     # Citations the model made up or edited are reported, never silently passed on
     unverified = unverifiedQuotes(answer, toolOutputs(list(context)[turn_start:]))
